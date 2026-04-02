@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Admin Dashboard — Academic Prediction System</title>
+    <th:block th:insert="~{base :: head_css}" />
+</head>
+
+<body>
+    <th:block th:insert="~{base :: orbs}" />
+    <th:block th:insert="~{base :: navbar}" />
+    <th:block th:insert="~{base :: flash_messages}" />
+
+    <div class="main-content fade-in">
+        <div class="page-header">
+            <h1><i class="fas fa-user-shield"></i> Admin Dashboard</h1>
+            <p>Manage staff accounts and students for your institution</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid-3" style="margin-bottom: 2rem;">
+            <div class="stat-card">
+                <div class="stat-value" th:text="${totalAdmins}">0</div>
+                <div class="stat-label">Total Admins</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${totalStaff}">0</div>
+                <div class="stat-label">Total Staff</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${totalStudents}">0</div>
+                <div class="stat-label">Total Students</div>
+            </div>
+        </div>
+
+        <!-- Admin Section -->
+        <div class="grid-2" style="margin-bottom: 2rem;">
+            <!-- Add Admin Form -->
+            <div class="card">
+                <div class="card-title"><i class="fas fa-user-shield"></i> Add New Admin</div>
+                <form method="POST" th:action="@{/dashboard/admin/add-admin}">
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" name="username" class="form-control" placeholder="Enter admin username"
+                            required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control"
+                            placeholder="Set a password (min 4 chars)" required minlength="4">
+                    </div>
+                    <button type="submit" class="btn"
+                        style="width: 100%; background: linear-gradient(135deg, #7c3aed, #a855f7); color: #fff; border: none;">
+                        <i class="fas fa-plus"></i> Add Admin
+                    </button>
+                </form>
+            </div>
+            <!-- Admin List -->
+            <div class="card">
+                <div class="card-title"><i class="fas fa-user-shield"></i> Admin List</div>
+                <div th:if="${#lists.isEmpty(adminList)}" class="empty-state">
+                    <i class="fas fa-user-shield"></i>
+                    <p>No other admins yet</p>
+                </div>
+                <div th:if="${!#lists.isEmpty(adminList)}" class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Username</th>
+                                <th>Created</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="admin, iter : ${adminList}">
+                                <td th:text="${iter.count}">1</td>
+                                <td style="font-weight: 600; color: var(--text-primary);">
+                                    <i class="fas fa-user-shield" style="color: var(--accent-purple);"></i>
+                                    <span th:text="${admin.username}">admin</span>
+                                    <span th:if="${admin.id == userId}"
+                                        style="font-size: 0.75rem; color: var(--accent-green);">(You)</span>
+                                </td>
+                                <td
+                                    th:text="${admin.createdAt != null ? #temporals.format(admin.createdAt, 'dd MMM yyyy') : 'N/A'}">
+                                </td>
+                                <td>
+                                    <form th:if="${admin.id != userId}" method="POST"
+                                        th:action="@{/dashboard/admin/delete-admin/{id}(id=${admin.id})}"
+                                        onsubmit="return confirm('Delete this admin?');" style="display:inline;">
+                                        <button type="submit" class="btn btn-danger btn-sm"><i
+                                                class="fas fa-trash"></i></button>
+                                    </form>
+                                    <span th:if="${admin.id == userId}"
+                                        style="font-size: 0.8rem; color: var(--text-muted);">—</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Staff Section -->
+        <div class="grid-2" style="margin-bottom: 2rem;">
+            <div class="card">
+                <div class="card-title"><i class="fas fa-user-plus"></i> Add New Staff</div>
+                <form method="POST" th:action="@{/dashboard/admin/add-staff}">
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" name="username" class="form-control" placeholder="Enter staff username"
+                            required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control"
+                            placeholder="Set a password (min 4 chars)" required minlength="4">
+                    </div>
+                    <button type="submit" class="btn"
+                        style="width: 100%; background: linear-gradient(135deg, #059669, #10b981); color: #fff; border: none;">
+                        <i class="fas fa-plus"></i> Add Staff
+                    </button>
+                </form>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-users"></i> Staff List</div>
+                <div th:if="${#lists.isEmpty(staffList)}" class="empty-state">
+                    <i class="fas fa-users"></i>
+                    <p>No staff members yet</p>
+                </div>
+                <div th:if="${!#lists.isEmpty(staffList)}" class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Username</th>
+                                <th>Created</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="staff, iter : ${staffList}">
+                                <td th:text="${iter.count}">1</td>
+                                <td style="font-weight: 600; color: var(--text-primary);">
+                                    <i class="fas fa-chalkboard-teacher" style="color: var(--accent-green);"></i>
+                                    <span th:text="${staff.username}">staff</span>
+                                </td>
+                                <td
+                                    th:text="${staff.createdAt != null ? #temporals.format(staff.createdAt, 'dd MMM yyyy') : 'N/A'}">
+                                </td>
+                                <td>
+                                    <form method="POST"
+                                        th:action="@{/dashboard/admin/delete-staff/{id}(id=${staff.id})}"
+                                        onsubmit="return confirm('Delete this staff?');" style="display:inline;">
+                                        <button type="submit" class="btn btn-danger btn-sm"><i
+                                                class="fas fa-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Student Section -->
+        <div class="grid-2" style="margin-bottom: 2rem;">
+            <div class="card">
+                <div class="card-title"><i class="fas fa-user-graduate"></i> Add New Student</div>
+                <form method="POST" th:action="@{/dashboard/staff/add-student}">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Register Number</label>
+                            <input type="text" name="reg_no" class="form-control" placeholder="e.g., 2024CSE001"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" name="name" class="form-control" placeholder="Student full name"
+                                required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Department</label>
+                            <select name="dept" class="form-control" required>
+                                <option value="">Select Dept</option>
+                                <option value="CSE">CSE</option>
+                                <option value="ECE">ECE</option>
+                                <option value="EEE">EEE</option>
+                                <option value="MECH">MECH</option>
+                                <option value="CIVIL">CIVIL</option>
+                                <option value="IT">IT</option>
+                                <option value="AIDS">AIDS</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Year</label>
+                            <select name="year" class="form-control" required>
+                                <option value="">Select Year</option>
+                                <option value="1">1st Year</option>
+                                <option value="2">2nd Year</option>
+                                <option value="3">3rd Year</option>
+                                <option value="4">4th Year</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Assign to Staff</label>
+                            <select name="staff_id" class="form-control" required>
+                                <option value="">Select Staff</option>
+                                <option th:each="staff : ${staffList}" th:value="${staff.id}"
+                                    th:text="${staff.username}">staff1</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="password" name="password" class="form-control"
+                                placeholder="Student login password" required minlength="4">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn"
+                        style="width: 100%; background: linear-gradient(135deg, #d97706, #fbbf24); color: #fff; border: none;">
+                        <i class="fas fa-plus"></i> Add Student
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Student List -->
+        <div class="card">
+            <div class="card-title"
+                style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <span><i class="fas fa-list"></i> Student List</span>
+                <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                    <a th:href="@{/dashboard/download-students}" class="btn btn-primary btn-sm"><i
+                            class="fas fa-download"></i> All CSV</a>
+                    <a th:href="@{/dashboard/download-students/Low}" class="btn btn-sm"
+                        style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; border: none;"><i
+                            class="fas fa-shield-alt"></i> Low</a>
+                    <a th:href="@{/dashboard/download-students/Medium}" class="btn btn-sm"
+                        style="background: linear-gradient(135deg, #d97706, #fbbf24); color: #fff; border: none;"><i
+                            class="fas fa-exclamation-triangle"></i> Med</a>
+                    <a th:href="@{/dashboard/download-students/High}" class="btn btn-sm"
+                        style="background: linear-gradient(135deg, #dc2626, #ef4444); color: #fff; border: none;"><i
+                            class="fas fa-skull-crossbones"></i> High</a>
+                </div>
+            </div>
+            <div th:if="${!#lists.isEmpty(studentData)}">
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.2rem; flex-wrap: wrap; align-items: flex-end;">
+                    <div style="flex: 1; min-width: 220px;">
+                        <label class="form-label">Search</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="searchInput" class="form-control"
+                                placeholder="Search by name or reg no...">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="doSearch()"><i
+                                    class="fas fa-search"></i></button>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap;">
+                        <div><label class="form-label">Dept</label><select id="filterDept" class="form-control"
+                                style="min-width: 100px;">
+                                <option value="">All</option>
+                                <option value="CSE">CSE</option>
+                                <option value="ECE">ECE</option>
+                                <option value="EEE">EEE</option>
+                                <option value="MECH">MECH</option>
+                                <option value="CIVIL">CIVIL</option>
+                                <option value="IT">IT</option>
+                                <option value="AIDS">AIDS</option>
+                            </select></div>
+                        <div><label class="form-label">Year</label><select id="filterYear" class="form-control"
+                                style="min-width: 80px;">
+                                <option value="">All</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                            </select></div>
+                        <div><label class="form-label">Result</label><select id="filterResult" class="form-control"
+                                style="min-width: 90px;">
+                                <option value="">All</option>
+                                <option value="Pass">Pass</option>
+                                <option value="Fail">Fail</option>
+                                <option value="Pending">Pending</option>
+                            </select></div>
+                        <button type="button" class="btn btn-success btn-sm" onclick="doFilter()"><i
+                                class="fas fa-filter"></i></button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="studentTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Reg No</th>
+                                <th>Dept</th>
+                                <th>Attend %</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="item, iter : ${studentData}" th:data-name="${item['student'].name}"
+                                th:data-regno="${item['student'].regNo}" th:data-dept="${item['student'].dept}"
+                                th:data-year="${item['student'].year}"
+                                th:data-result="${item['academic'] != null and item['academic'].predictionResult != null ? item['academic'].predictionResult : 'Pending'}">
+                                <td th:text="${iter.count}">1</td>
+                                <td style="font-weight: 600; color: var(--text-primary);"
+                                    th:text="${item['student'].name}">Name</td>
+                                <td th:text="${item['student'].regNo}">REG001</td>
+                                <td th:text="${item['student'].dept}">CSE</td>
+                                <td>
+                                    <span th:if="${item['academic'] != null}"
+                                        th:text="${item['academic'].attendance + '%'}">0%</span>
+                                    <span th:if="${item['academic'] == null}" style="color: var(--text-muted);">—</span>
+                                </td>
+                                <td>
+                                    <span
+                                        th:if="${item['academic'] != null and item['academic'].predictionResult != null}"
+                                        th:classappend="'result-' + ${#strings.toLowerCase(item['academic'].predictionResult)}"
+                                        th:text="${item['academic'].predictionResult}">Pass</span>
+                                    <span
+                                        th:if="${item['academic'] == null or item['academic'].predictionResult == null}"
+                                        style="color: var(--text-muted);">Pending</span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                        <a th:href="@{/dashboard/staff/edit-student/{r}(r=${item['student'].regNo})}"
+                                            class="btn btn-sm" title="Edit Student"
+                                            style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; border: none;"><i
+                                                class="fas fa-user-edit"></i></a>
+                                        <a th:href="@{/dashboard/staff/enter-marks/{r}(r=${item['student'].regNo})}"
+                                            class="btn btn-primary btn-sm" title="Enter Marks"><i
+                                                class="fas fa-edit"></i></a>
+                                        <form method="POST"
+                                            th:action="@{/dashboard/staff/predict/{r}(r=${item['student'].regNo})}"
+                                            style="display:inline;">
+                                            <button type="submit" class="btn btn-warning btn-sm" title="Predict"><i
+                                                    class="fas fa-brain"></i></button>
+                                        </form>
+                                        <form method="POST"
+                                            th:action="@{/dashboard/staff/delete-student/{r}(r=${item['student'].regNo})}"
+                                            onsubmit="return confirm('Delete this student?');" style="display:inline;">
+                                            <button type="submit" class="btn btn-danger btn-sm" title="Delete"><i
+                                                    class="fas fa-trash"></i></button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div th:if="${#lists.isEmpty(studentData)}" class="empty-state">
+                <i class="fas fa-user-graduate"></i>
+                <p>No students yet</p>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:insert="~{base :: base_js}" />
+    <script>
+        function doSearch() { var q = document.getElementById('searchInput').value.toLowerCase(); document.querySelectorAll('#studentTable tbody tr').forEach(function (r) { var n = (r.dataset.name || '').toLowerCase(), g = (r.dataset.regno || '').toLowerCase(); r.style.display = (!q || n.includes(q) || g.includes(q)) ? '' : 'none'; }) }
+        function doFilter() { var d = document.getElementById('filterDept').value, y = document.getElementById('filterYear').value, res = document.getElementById('filterResult').value; document.querySelectorAll('#studentTable tbody tr').forEach(function (r) { var s = true; if (d && r.dataset.dept !== d) s = false; if (y && r.dataset.year !== y) s = false; if (res && r.dataset.result !== res) s = false; r.style.display = s ? '' : 'none'; }) }
+        document.getElementById('searchInput') && document.getElementById('searchInput').addEventListener('keyup', function (e) { if (e.key === 'Enter') doSearch(); });
+    </script>
+</body>
+
+</html>

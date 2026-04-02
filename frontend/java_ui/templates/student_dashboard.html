@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Student Dashboard — Academic Prediction System</title>
+    <th:block th:insert="~{base :: head_css}" />
+    <style>
+        .circle-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            justify-content: center;
+            padding: 1rem 0;
+        }
+
+        .circle-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .circle-wrap {
+            position: relative;
+            width: 100px;
+            height: 100px;
+        }
+
+        .circle-wrap svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+
+        .circle-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.06);
+            stroke-width: 8;
+        }
+
+        .circle-fg {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 283;
+            stroke-dashoffset: 283;
+            transition: stroke-dashoffset 1.2s ease;
+        }
+
+        .circle-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+        }
+
+        .circle-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .circle-sub {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .stroke-green {
+            stroke: #10b981;
+        }
+
+        .stroke-orange {
+            stroke: #f59e0b;
+        }
+
+        .stroke-red {
+            stroke: #ef4444;
+        }
+
+        .stroke-blue {
+            stroke: #667eea;
+        }
+    </style>
+</head>
+
+<body>
+    <th:block th:insert="~{base :: orbs}" />
+    <th:block th:insert="~{base :: navbar}" />
+    <th:block th:insert="~{base :: flash_messages}" />
+
+    <div class="main-content fade-in">
+        <div class="page-header">
+            <h1><i class="fas fa-user-graduate"></i> Welcome, <span th:text="${student.name}">Student</span></h1>
+            <p>View your academic details and prediction results</p>
+        </div>
+
+        <!-- Student Info -->
+        <div class="grid-4" style="margin-bottom: 2rem;">
+            <div class="stat-card">
+                <div class="stat-value" style="font-size: 1.2rem;" th:text="${student.regNo}">REG</div>
+                <div class="stat-label">Register Number</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="font-size: 1.2rem;" th:text="${student.dept}">CSE</div>
+                <div class="stat-label">Department</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${student.year}">1</div>
+                <div class="stat-label">Year</div>
+            </div>
+            <div class="stat-card">
+                <div th:if="${prediction != null}" class="stat-value" style="font-size: 1.5rem;"
+                    th:classappend="'result-' + ${#strings.toLowerCase(prediction['prediction_result'])}"
+                    th:text="${prediction['prediction_result']}">Pass</div>
+                <div th:if="${prediction == null}" class="stat-value"
+                    style="font-size: 1rem; color: var(--text-muted);">Pending</div>
+                <div class="stat-label">Prediction</div>
+            </div>
+        </div>
+
+        <div th:if="${academic != null}">
+            <!-- Performance Comparison Gauge -->
+            <style>
+                .gauge-card {
+                    margin-bottom: 2rem;
+                }
+
+                .gauge-container {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    padding: 1.5rem 0 0.5rem;
+                }
+
+                .gauge-svg-wrap {
+                    position: relative;
+                    width: 280px;
+                    height: 160px;
+                }
+
+                .gauge-svg-wrap svg {
+                    width: 100%;
+                    height: 100%;
+                    overflow: visible;
+                }
+
+                .gauge-center-text {
+                    position: absolute;
+                    bottom: 8px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    text-align: center;
+                }
+
+                .gauge-score-value {
+                    font-size: 2.8rem;
+                    font-weight: 900;
+                    line-height: 1;
+                    background: var(--gradient-primary);
+                    -webkit-background-clip: text;
+                    background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }
+
+                .gauge-score-label {
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    font-weight: 600;
+                    margin-top: 2px;
+                }
+
+                .gauge-rating {
+                    margin-top: 12px;
+                    padding: 6px 20px;
+                    border-radius: 20px;
+                    font-size: 0.85rem;
+                    font-weight: 700;
+                    letter-spacing: 0.5px;
+                }
+
+                .gauge-rating.excellent {
+                    background: rgba(52, 211, 153, 0.15);
+                    color: #34d399;
+                }
+
+                .gauge-rating.good {
+                    background: rgba(124, 143, 255, 0.15);
+                    color: #7c8fff;
+                }
+
+                .gauge-rating.average {
+                    background: rgba(251, 191, 36, 0.15);
+                    color: #fbbf24;
+                }
+
+                .gauge-rating.needs-improvement {
+                    background: rgba(248, 113, 113, 0.15);
+                    color: #f87171;
+                }
+
+                .gauge-legend {
+                    display: flex;
+                    justify-content: center;
+                    gap: 2rem;
+                    margin-top: 1.2rem;
+                    flex-wrap: wrap;
+                }
+
+                .gauge-legend-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 0.88rem;
+                    font-weight: 500;
+                    color: var(--text-secondary);
+                }
+
+                .gauge-legend-dot {
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                    flex-shrink: 0;
+                }
+
+                .gauge-legend-val {
+                    font-weight: 800;
+                    font-size: 1rem;
+                }
+
+                .gauge-delta {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    padding: 4px 12px;
+                    border-radius: 16px;
+                    font-size: 0.8rem;
+                    font-weight: 700;
+                    margin-top: 10px;
+                }
+
+                .gauge-delta.positive {
+                    background: rgba(52, 211, 153, 0.12);
+                    color: #34d399;
+                }
+
+                .gauge-delta.negative {
+                    background: rgba(248, 113, 113, 0.12);
+                    color: #f87171;
+                }
+
+                .gauge-delta.neutral {
+                    background: rgba(124, 143, 255, 0.12);
+                    color: #7c8fff;
+                }
+
+                .gauge-tick-label {
+                    font-size: 0.65rem;
+                    font-weight: 600;
+                    fill: var(--text-muted);
+                }
+            </style>
+            <div class="card gauge-card">
+                <div class="card-title"><i class="fas fa-tachometer-alt"></i> Performance Comparison</div>
+                <div class="gauge-container">
+                    <div class="gauge-svg-wrap">
+                        <svg viewBox="0 0 280 160" id="perfGauge">
+                            <defs>
+                                <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#f87171" />
+                                    <stop offset="35%" stop-color="#fbbf24" />
+                                    <stop offset="65%" stop-color="#7c8fff" />
+                                    <stop offset="100%" stop-color="#34d399" />
+                                </linearGradient>
+                                <linearGradient id="gaugeBg" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="rgba(255,255,255,0.04)" />
+                                    <stop offset="100%" stop-color="rgba(255,255,255,0.04)" />
+                                </linearGradient>
+                                <filter id="gaugeGlow">
+                                    <feGaussianBlur stdDeviation="3" result="glow" />
+                                    <feMerge>
+                                        <feMergeNode in="glow" />
+                                        <feMergeNode in="SourceGraphic" />
+                                    </feMerge>
+                                </filter>
+                            </defs>
+                            <path d="M 30 145 A 110 110 0 0 1 250 145" fill="none" stroke="url(#gaugeBg)"
+                                stroke-width="18" stroke-linecap="round" />
+                            <path id="gaugeArc" d="M 30 145 A 110 110 0 0 1 250 145" fill="none"
+                                stroke="url(#gaugeGrad)" stroke-width="18" stroke-linecap="round"
+                                stroke-dasharray="0 999" filter="url(#gaugeGlow)" />
+                            <text x="22" y="158" class="gauge-tick-label" text-anchor="middle">0</text>
+                            <text x="68" y="82" class="gauge-tick-label" text-anchor="middle">25</text>
+                            <text x="140" y="48" class="gauge-tick-label" text-anchor="middle">50</text>
+                            <text x="212" y="82" class="gauge-tick-label" text-anchor="middle">75</text>
+                            <text x="258" y="158" class="gauge-tick-label" text-anchor="middle">100</text>
+                            <line id="deptNeedle" x1="140" y1="145" x2="140" y2="50" stroke="#a855f7" stroke-width="2.5"
+                                stroke-linecap="round" opacity="0.85" />
+                            <circle id="deptNeedleDot" cx="140" cy="50" r="5" fill="#a855f7" opacity="0.9" />
+                        </svg>
+                        <div class="gauge-center-text">
+                            <div class="gauge-score-value" id="gaugeValue">0</div>
+                            <div class="gauge-score-label">Your Score</div>
+                        </div>
+                    </div>
+
+                    <!-- Performance Rating -->
+                    <div th:if="${performanceScore >= 80}" class="gauge-rating excellent"><i class="fas fa-trophy"
+                            style="margin-right:6px;"></i> Excellent</div>
+                    <div th:if="${performanceScore >= 60 and performanceScore < 80}" class="gauge-rating good"><i
+                            class="fas fa-thumbs-up" style="margin-right:6px;"></i> Good</div>
+                    <div th:if="${performanceScore >= 40 and performanceScore < 60}" class="gauge-rating average"><i
+                            class="fas fa-minus-circle" style="margin-right:6px;"></i> Average</div>
+                    <div th:if="${performanceScore < 40}" class="gauge-rating needs-improvement"><i
+                            class="fas fa-arrow-down" style="margin-right:6px;"></i> Needs Improvement</div>
+
+                    <!-- Legend -->
+                    <div class="gauge-legend">
+                        <div class="gauge-legend-item">
+                            <div class="gauge-legend-dot" style="background: var(--gradient-primary);"></div>
+                            You: <span class="gauge-legend-val" th:text="${performanceScore}">0</span>
+                        </div>
+                        <div class="gauge-legend-item">
+                            <div class="gauge-legend-dot" style="background: #a855f7;"></div>
+                            Dept. Avg: <span class="gauge-legend-val" th:text="${deptAvgScore}">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Delta badge -->
+                    <div th:if="${performanceScore - deptAvgScore > 0}" class="gauge-delta positive">
+                        <i class="fas fa-arrow-up"></i>
+                        <span
+                            th:text="${T(java.lang.Math).round((performanceScore - deptAvgScore) * 10.0) / 10.0}">0</span>
+                        above dept. average
+                    </div>
+                    <div th:if="${performanceScore - deptAvgScore < 0}" class="gauge-delta negative">
+                        <i class="fas fa-arrow-down"></i>
+                        <span
+                            th:text="${T(java.lang.Math).round((deptAvgScore - performanceScore) * 10.0) / 10.0}">0</span>
+                        below dept. average
+                    </div>
+                    <div th:if="${performanceScore - deptAvgScore == 0}" class="gauge-delta neutral">
+                        <i class="fas fa-equals"></i> Equal to dept. average
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hidden data element for gauge JS -->
+            <div id="gaugeData" th:data-score="${performanceScore}" th:data-dept="${deptAvgScore}"
+                style="display:none;"></div>
+
+            <!-- Marks Progress Circles -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <div class="card-title"><i class="fas fa-chart-pie"></i> Marks Progress</div>
+                <div class="circle-grid">
+                    <!-- Internal 1 -->
+                    <div class="circle-item">
+                        <div class="circle-wrap">
+                            <svg viewBox="0 0 100 100">
+                                <circle class="circle-bg" cx="50" cy="50" r="45" />
+                                <circle class="circle-fg" cx="50" cy="50" r="45"
+                                    th:classappend="${academic.internal1 >= 60 ? 'stroke-green' : (academic.internal1 >= 40 ? 'stroke-orange' : 'stroke-red')}"
+                                    th:data-pct="${academic.internal1}" />
+                            </svg>
+                            <div class="circle-text" th:text="${academic.internal1 + '%'}">0%</div>
+                        </div>
+                        <div class="circle-label">Internal 1</div>
+                        <div class="circle-sub" th:text="${academic.internal1 + '/100'}">0/100</div>
+                    </div>
+                    <!-- Internal 2 -->
+                    <div class="circle-item">
+                        <div class="circle-wrap">
+                            <svg viewBox="0 0 100 100">
+                                <circle class="circle-bg" cx="50" cy="50" r="45" />
+                                <circle class="circle-fg" cx="50" cy="50" r="45"
+                                    th:classappend="${academic.internal2 >= 60 ? 'stroke-green' : (academic.internal2 >= 40 ? 'stroke-orange' : 'stroke-red')}"
+                                    th:data-pct="${academic.internal2}" />
+                            </svg>
+                            <div class="circle-text" th:text="${academic.internal2 + '%'}">0%</div>
+                        </div>
+                        <div class="circle-label">Internal 2</div>
+                        <div class="circle-sub" th:text="${academic.internal2 + '/100'}">0/100</div>
+                    </div>
+                    <!-- Internal 3 -->
+                    <div class="circle-item">
+                        <div class="circle-wrap">
+                            <svg viewBox="0 0 100 100">
+                                <circle class="circle-bg" cx="50" cy="50" r="45" />
+                                <circle class="circle-fg" cx="50" cy="50" r="45"
+                                    th:classappend="${academic.internal3 >= 60 ? 'stroke-green' : (academic.internal3 >= 40 ? 'stroke-orange' : 'stroke-red')}"
+                                    th:data-pct="${academic.internal3}" />
+                            </svg>
+                            <div class="circle-text" th:text="${academic.internal3 + '%'}">0%</div>
+                        </div>
+                        <div class="circle-label">Internal 3</div>
+                        <div class="circle-sub" th:text="${academic.internal3 + '/100'}">0/100</div>
+                    </div>
+                    <!-- Assignment -->
+                    <div class="circle-item" th:with="asgPct=${academic.assignment / 30.0 * 100}">
+                        <div class="circle-wrap">
+                            <svg viewBox="0 0 100 100">
+                                <circle class="circle-bg" cx="50" cy="50" r="45" />
+                                <circle class="circle-fg" cx="50" cy="50" r="45"
+                                    th:classappend="${asgPct >= 60 ? 'stroke-green' : (asgPct >= 40 ? 'stroke-orange' : 'stroke-red')}"
+                                    th:data-pct="${asgPct}" />
+                            </svg>
+                            <div class="circle-text" th:text="${T(java.lang.Math).round(asgPct) + '%'}">0%</div>
+                        </div>
+                        <div class="circle-label">Assignment</div>
+                        <div class="circle-sub" th:text="${academic.assignment + '/30'}">0/30</div>
+                    </div>
+                    <!-- Attendance -->
+                    <div class="circle-item">
+                        <div class="circle-wrap">
+                            <svg viewBox="0 0 100 100">
+                                <circle class="circle-bg" cx="50" cy="50" r="45" />
+                                <circle class="circle-fg" cx="50" cy="50" r="45"
+                                    th:classappend="${academic.attendance >= 60 ? 'stroke-green' : (academic.attendance >= 40 ? 'stroke-orange' : 'stroke-red')}"
+                                    th:data-pct="${academic.attendance}" />
+                            </svg>
+                            <div class="circle-text" th:text="${academic.attendance + '%'}">0%</div>
+                        </div>
+                        <div class="circle-label">Attendance</div>
+                    </div>
+                    <!-- Internal Average -->
+                    <div class="circle-item">
+                        <div class="circle-wrap" style="width: 110px; height: 110px;">
+                            <svg viewBox="0 0 100 100" style="width: 110px; height: 110px;">
+                                <circle class="circle-bg" cx="50" cy="50" r="45" />
+                                <circle class="circle-fg stroke-blue" cx="50" cy="50" r="45"
+                                    th:data-pct="${academic.internalAvg()}" />
+                            </svg>
+                            <div class="circle-text" style="color: var(--accent-blue);"
+                                th:text="${academic.internalAvg() + '%'}">0%</div>
+                        </div>
+                        <div class="circle-label" style="color: var(--accent-blue); font-weight: 700;">
+                            <i class="fas fa-star" style="font-size: 0.7rem;"></i> Average
+                        </div>
+                        <div class="circle-sub" th:text="${academic.internalAvg() + '/100'}">0/100</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-bottom: 2rem;">
+                <!-- Academic Details Table -->
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-clipboard-list"></i> Academic Details</div>
+                    <table>
+                        <tr>
+                            <td style="font-weight: 500;"><i class="fas fa-pen"
+                                    style="color: var(--accent-blue); margin-right: 8px;"></i>Internal Test 1</td>
+                            <td style="text-align: right; font-weight: 700;" th:text="${academic.internal1}">0</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 500;"><i class="fas fa-pen"
+                                    style="color: var(--accent-blue); margin-right: 8px;"></i>Internal Test 2</td>
+                            <td style="text-align: right; font-weight: 700;" th:text="${academic.internal2}">0</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 500;"><i class="fas fa-pen"
+                                    style="color: var(--accent-blue); margin-right: 8px;"></i>Internal Test 3</td>
+                            <td style="text-align: right; font-weight: 700;" th:text="${academic.internal3}">0</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 500;"><i class="fas fa-tasks"
+                                    style="color: var(--accent-purple); margin-right: 8px;"></i>Assignment</td>
+                            <td style="text-align: right; font-weight: 700;" th:text="${academic.assignment}">0</td>
+                        </tr>
+                        <tr style="background: rgba(102, 126, 234, 0.08);">
+                            <td style="font-weight: 700; color: var(--accent-blue);">Internal Average</td>
+                            <td style="text-align: right; font-weight: 800; color: var(--accent-blue);"
+                                th:text="${academic.internalAvg()}">0</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 500;"><i class="fas fa-chart-line"
+                                    style="color: var(--accent-green); margin-right: 8px;"></i>Previous Sem GPA</td>
+                            <td style="text-align: right; font-weight: 700;" th:text="${academic.prevSemGpa}">0</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 500;"><i class="fas fa-clock"
+                                    style="color: var(--accent-orange); margin-right: 8px;"></i>Study Hours/Day</td>
+                            <td style="text-align: right; font-weight: 700;" th:text="${academic.studyHoursPerDay}">0
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 500;"><i class="fas fa-calendar-check"
+                                    style="color: var(--accent-green); margin-right: 8px;"></i>Attendance</td>
+                            <td style="text-align: right; font-weight: 700;" th:text="${academic.attendance + '%'}">0%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 500;"><i class="fas fa-running"
+                                    style="color: var(--accent-cyan); margin-right: 8px;"></i>Extra Activity</td>
+                            <td style="text-align: right; font-weight: 700;">
+                                <span th:text="${academic.extraActivity ? 'Yes' : 'No'}">No</span>
+                                <span th:if="${academic.extraActivityType != null}"
+                                    th:text="'(' + ${academic.extraActivityType} + ')'"></span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Prediction Result -->
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-brain"></i> Prediction Result</div>
+                    <div th:if="${prediction != null}">
+                        <div style="text-align: center; padding: 1.5rem 0;">
+                            <div style="margin-bottom: 1.5rem;">
+                                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;">Result
+                                </div>
+                                <div style="font-size: 2.5rem; font-weight: 900;"
+                                    th:classappend="'result-' + ${#strings.toLowerCase(prediction['prediction_result'])}">
+                                    <i th:if="${prediction['prediction_result'] == 'Pass'}"
+                                        class="fas fa-check-circle"></i>
+                                    <i th:if="${prediction['prediction_result'] != 'Pass'}"
+                                        class="fas fa-times-circle"></i>
+                                    <span th:text="${prediction['prediction_result']}">Pass</span>
+                                </div>
+                            </div>
+                            <div
+                                style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                                <div
+                                    style="background: var(--bg-primary); padding: 1rem; border-radius: var(--radius-sm);">
+                                    <div style="font-size: 0.8rem; color: var(--text-muted);">Grade</div>
+                                    <div style="font-size: 1.8rem; font-weight: 800; color: var(--accent-blue);"
+                                        th:text="${prediction['grade']}">A</div>
+                                </div>
+                                <div
+                                    style="background: var(--bg-primary); padding: 1rem; border-radius: var(--radius-sm);">
+                                    <div style="font-size: 0.8rem; color: var(--text-muted);">Risk Level</div>
+                                    <div style="font-size: 1.3rem; font-weight: 800;"
+                                        th:classappend="'risk-' + ${#strings.toLowerCase(prediction['risk_level'])}">
+                                        <i th:if="${prediction['risk_level'] == 'Low'}" class="fas fa-shield-alt"></i>
+                                        <i th:if="${prediction['risk_level'] == 'Medium'}"
+                                            class="fas fa-exclamation-triangle"></i>
+                                        <i th:if="${prediction['risk_level'] == 'High'}"
+                                            class="fas fa-skull-crossbones"></i>
+                                        <span th:text="${prediction['risk_level']}">Low</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Suggestions -->
+                        <div th:if="${!#lists.isEmpty(suggestions)}"
+                            style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                            <div
+                                style="font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem; color: var(--accent-orange);">
+                                <i class="fas fa-lightbulb"></i> Suggestions for Improvement
+                            </div>
+                            <div th:each="sug : ${suggestions}"
+                                style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; padding: 10px 14px; background: var(--bg-primary); border-radius: var(--radius-sm); border-left: 3px solid var(--accent-orange); font-size: 0.9rem; color: var(--text-secondary);">
+                                <i class="fas fa-chevron-right"
+                                    style="color: var(--accent-orange); margin-top: 3px; font-size: 0.7rem;"></i>
+                                <span th:text="${sug}">Suggestion</span>
+                            </div>
+                        </div>
+
+                        <!-- Download -->
+                        <div
+                            style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem; text-align: center;">
+                            <a th:href="@{/dashboard/student/download-report}" class="btn btn-success"
+                                style="padding: 12px 32px; font-size: 1rem;">
+                                <i class="fas fa-file-pdf"></i> Download Report as PDF
+                            </a>
+                        </div>
+                    </div>
+
+                    <div th:if="${prediction == null}" class="empty-state">
+                        <i class="fas fa-hourglass-half"></i>
+                        <p>Prediction not yet available</p>
+                        <p style="font-size: 0.8rem;">Your staff will run the prediction after entering your marks</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subject-wise Performance -->
+            <div class="card" style="margin-bottom: 2rem;" th:if="${!#lists.isEmpty(subjectWise)}">
+                <div class="card-title"><i class="fas fa-book"></i> Subject-wise Performance</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Marks</th>
+                                <th>Max Marks</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="sub : ${subjectWise}">
+                                <td style="font-weight: 600;" th:text="${sub['name']}">Subject</td>
+                                <td th:text="${sub['marks']}">0</td>
+                                <td th:text="${T(java.lang.Math).round(sub['max'])}">100</td>
+                                <td>
+                                    <span th:classappend="'result-' + ${#strings.toLowerCase(sub['status'])}"
+                                        th:text="${sub['status']}">Pass</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Prediction History -->
+            <div class="card" style="margin-bottom: 2rem;" th:if="${!#lists.isEmpty(predictionHistory)}">
+                <div class="card-title"><i class="fas fa-history"></i> Prediction History</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Date</th>
+                                <th>Int Avg</th>
+                                <th>Attend %</th>
+                                <th>Result</th>
+                                <th>Risk</th>
+                                <th>Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="h, iter : ${predictionHistory}">
+                                <td th:text="${iter.count}">1</td>
+                                <td th:text="${#temporals.format(h.predictedAt, 'dd MMM yyyy, hh:mm a')}">Date</td>
+                                <td th:text="${h.internalAvg}">0</td>
+                                <td th:text="${h.attendance + '%'}">0%</td>
+                                <td>
+                                    <span th:classappend="'result-' + ${#strings.toLowerCase(h.predictionResult)}"
+                                        th:text="${h.predictionResult}">Pass</span>
+                                </td>
+                                <td>
+                                    <span th:classappend="'risk-' + ${#strings.toLowerCase(h.riskLevel)}"
+                                        th:text="${h.riskLevel}">Low</span>
+                                </td>
+                                <td style="font-weight: 700;" th:text="${h.grade}">A</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- No academic records -->
+        <div th:if="${academic == null}" class="card">
+            <div class="empty-state">
+                <i class="fas fa-clipboard"></i>
+                <p>No academic records found</p>
+                <p style="font-size: 0.85rem;">Your staff will add your marks and run the prediction. Check back later.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:insert="~{base :: base_js}" />
+    <script>
+        /*<![CDATA[*/
+        document.addEventListener('DOMContentLoaded', function () {
+            // Animate circular progress rings
+            document.querySelectorAll('.circle-fg[data-pct]').forEach(function (circle) {
+                var pct = Math.min(parseFloat(circle.getAttribute('data-pct')), 100);
+                var offset = 283 - (283 * pct / 100);
+                setTimeout(function () { circle.style.strokeDashoffset = offset; }, 200);
+            });
+
+            // Gauge animation
+            var gaugeDataEl = document.getElementById('gaugeData');
+            if (!gaugeDataEl) return;
+            var studentScore = parseFloat(gaugeDataEl.getAttribute('data-score')) || 0;
+            var deptAvg = parseFloat(gaugeDataEl.getAttribute('data-dept')) || 0;
+            var gaugeArc = document.getElementById('gaugeArc');
+            var gaugeValue = document.getElementById('gaugeValue');
+            var deptNeedle = document.getElementById('deptNeedle');
+            var deptNeedleDot = document.getElementById('deptNeedleDot');
+
+            if (gaugeArc) {
+                var cx = 140, cy = 145, r = 110;
+                var totalArcLen = Math.PI * r;
+                var targetLen = (studentScore / 100) * totalArcLen;
+                var duration = 1500;
+                var startTime = null;
+
+                function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+                function animateGauge(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    var elapsed = timestamp - startTime;
+                    var progress = Math.min(elapsed / duration, 1);
+                    var eased = easeOutCubic(progress);
+                    var currentLen = eased * targetLen;
+                    gaugeArc.setAttribute('stroke-dasharray', currentLen + ' ' + (totalArcLen - currentLen));
+                    gaugeValue.textContent = Math.round(eased * studentScore);
+                    if (progress < 1) requestAnimationFrame(animateGauge);
+                }
+                requestAnimationFrame(animateGauge);
+
+                // Position dept average needle
+                var deptAngle = Math.PI - (deptAvg / 100) * Math.PI;
+                var needleLen = 95;
+                var nx = cx + needleLen * Math.cos(deptAngle);
+                var ny = cy - needleLen * Math.sin(deptAngle);
+                deptNeedle.setAttribute('x2', nx);
+                deptNeedle.setAttribute('y2', ny);
+                deptNeedleDot.setAttribute('cx', nx);
+                deptNeedleDot.setAttribute('cy', ny);
+            }
+        });
+        /*]]>*/
+    </script>
+</body>
+
+</html>

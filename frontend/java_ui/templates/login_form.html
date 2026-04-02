@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Sign In — ' + ${#strings.capitalize(role)}">Sign In</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            background: #0a0a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bg-mesh {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .bg-mesh::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at 25% 40%, var(--role-glow) 0%, transparent 50%), radial-gradient(ellipse at 75% 60%, rgba(168, 85, 247, 0.06) 0%, transparent 50%);
+            animation: meshMove 20s ease-in-out infinite alternate;
+        }
+
+        @keyframes meshMove {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(-2%, 1%);
+            }
+        }
+
+        .particle {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(70px);
+        }
+
+        .particle-1 {
+            width: 300px;
+            height: 300px;
+            background: var(--role-glow);
+            top: -80px;
+            right: -80px;
+            animation: p1 16s ease-in-out infinite;
+        }
+
+        .particle-2 {
+            width: 250px;
+            height: 250px;
+            background: rgba(168, 85, 247, 0.06);
+            bottom: -60px;
+            left: -60px;
+            animation: p2 20s ease-in-out infinite;
+        }
+
+        @keyframes p1 {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            50% {
+                transform: translate(-40px, 50px);
+            }
+        }
+
+        @keyframes p2 {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            50% {
+                transform: translate(50px, -30px);
+            }
+        }
+
+        .role-admin {
+            --role-color: #7c8fff;
+            --role-glow: rgba(124, 143, 255, 0.1);
+            --role-gradient: linear-gradient(135deg, #7c8fff, #a855f7);
+        }
+
+        .role-staff {
+            --role-color: #34d399;
+            --role-glow: rgba(52, 211, 153, 0.1);
+            --role-gradient: linear-gradient(135deg, #34d399, #06b6d4);
+        }
+
+        .role-student {
+            --role-color: #fbbf24;
+            --role-glow: rgba(251, 191, 36, 0.1);
+            --role-gradient: linear-gradient(135deg, #fbbf24, #f97316);
+        }
+
+        .login-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 440px;
+            padding: 1.5rem;
+            animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(24px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-card {
+            background: rgba(16, 16, 48, 0.55);
+            backdrop-filter: blur(24px) saturate(150%);
+            -webkit-backdrop-filter: blur(24px) saturate(150%);
+            border: 1px solid rgba(124, 143, 255, 0.1);
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--role-gradient);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, rgba(124, 143, 255, 0.15), rgba(168, 85, 247, 0.1));
+            color: var(--role-color);
+            box-shadow: 0 4px 20px rgba(124, 143, 255, 0.15);
+        }
+
+        .login-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #f0f0ff;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.3rem;
+        }
+
+        .login-subtitle {
+            color: #6a6a90;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.3rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #b0b0d0;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6a6a90;
+            font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 14px 16px 14px 46px;
+            background: rgba(10, 10, 26, 0.6);
+            border: 1px solid rgba(124, 143, 255, 0.1);
+            border-radius: 12px;
+            color: #f0f0ff;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .form-control:focus {
+            border-color: var(--role-color);
+            box-shadow: 0 0 0 4px rgba(124, 143, 255, 0.12), 0 0 20px var(--role-glow);
+            background: rgba(10, 10, 26, 0.8);
+        }
+
+        .form-control:focus+i,
+        .input-wrapper:focus-within i {
+            color: var(--role-color);
+        }
+
+        .form-control::placeholder {
+            color: #4a4a6a;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 16px;
+            background: var(--role-gradient);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(124, 143, 255, 0.4);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #6a6a90;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-top: 1.5rem;
+            justify-content: center;
+            transition: color 0.3s, gap 0.3s;
+        }
+
+        .back-link:hover {
+            color: #b0b0d0;
+            gap: 12px;
+        }
+
+        .flash-msg {
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: fadeUp 0.4s ease;
+        }
+
+        .flash-msg.error {
+            background: rgba(248, 113, 113, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(248, 113, 113, 0.15);
+        }
+
+        .flash-msg.success {
+            background: rgba(52, 211, 153, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.15);
+        }
+
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 2rem 1.5rem;
+                border-radius: 20px;
+            }
+
+            .login-title {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+</head>
+
+<body th:classappend="'role-' + ${role}">
+    <div class="bg-mesh"></div>
+    <div class="particle particle-1"></div>
+    <div class="particle particle-2"></div>
+
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-icon">
+                    <i th:if="${role == 'admin'}" class="fas fa-user-shield"></i>
+                    <i th:if="${role == 'staff'}" class="fas fa-chalkboard-teacher"></i>
+                    <i th:if="${role == 'student'}" class="fas fa-user-graduate"></i>
+                </div>
+                <h2 class="login-title" th:text="${#strings.capitalize(role)} + ' Login'">Login</h2>
+                <p class="login-subtitle">Enter your credentials to continue</p>
+            </div>
+
+            <div class="flash-msg error" th:if="${error}">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${error}"></span>
+            </div>
+            <div class="flash-msg success" th:if="${success}">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${success}"></span>
+            </div>
+
+            <form method="POST" th:action="@{/login/{role}(role=${role})}">
+                <div class="form-group" th:if="${role == 'student'}">
+                    <label class="form-label">Register Number</label>
+                    <div class="input-wrapper">
+                        <input type="text" name="reg_no" class="form-control" placeholder="e.g., 2024CSE001" required
+                            autofocus>
+                        <i class="fas fa-id-card"></i>
+                    </div>
+                </div>
+                <div class="form-group" th:if="${role != 'student'}">
+                    <label class="form-label">Username</label>
+                    <div class="input-wrapper">
+                        <input type="text" name="username" class="form-control" placeholder="Enter your username"
+                            required autofocus>
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" name="password" class="form-control" placeholder="Enter your password"
+                            required>
+                        <i class="fas fa-lock"></i>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-login">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </button>
+            </form>
+
+            <a th:href="@{/}" class="back-link">
+                <i class="fas fa-arrow-left"></i> Back to role selection
+            </a>
+        </div>
+    </div>
+</body>
+
+</html>

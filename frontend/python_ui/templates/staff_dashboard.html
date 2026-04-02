@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+{% block title %}Staff Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-chalkboard-teacher"></i> Staff Dashboard</h1>
+    <p>Manage students, enter marks, and run predictions</p>
+</div>
+
+<!-- Stats -->
+<div class="grid-3" style="margin-bottom: 2rem;">
+    <div class="stat-card">
+        <div class="stat-value">{{ total_students }}</div>
+        <div class="stat-label">Your Students</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">
+            {{ student_data|selectattr('academic')|selectattr('academic.prediction_result')|list|length }}
+        </div>
+        <div class="stat-label">Predictions Done</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">
+            {{ student_data|selectattr('academic')|selectattr('academic.risk_level', 'equalto', 'High')|list|length }}
+        </div>
+        <div class="stat-label" style="color: var(--accent-red);">High Risk</div>
+    </div>
+</div>
+
+<!-- Add Student Section -->
+<div class="card" style="margin-bottom: 2rem;">
+    <div class="card-title">
+        <i class="fas fa-user-plus"></i> Add New Student
+    </div>
+    <form method="POST" action="{{ url_for('dashboard.add_student') }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Register Number</label>
+                <input type="text" name="reg_no" class="form-control" placeholder="e.g., 2024CSE001" required
+                    pattern="[A-Za-z0-9]+" title="Please enter a valid register number"
+                    oninvalid="this.setCustomValidity('Please enter a valid register number')"
+                    oninput="this.setCustomValidity('')">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Student Name</label>
+                <input type="text" name="name" class="form-control" placeholder="Full Name" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Department</label>
+                <select name="dept" class="form-control" required>
+                    <option value="">Select Department</option>
+                    <option value="CSE">CSE</option>
+                    <option value="ECE">ECE</option>
+                    <option value="EEE">EEE</option>
+                    <option value="MECH">MECH</option>
+                    <option value="CIVIL">CIVIL</option>
+                    <option value="IT">IT</option>
+                    <option value="AIDS">AIDS</option>
+                    <option value="AIML">AIML</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Year</label>
+                <select name="year" class="form-control" required>
+                    <option value="">Select Year</option>
+                    <option value="1">1st Year</option>
+                    <option value="2">2nd Year</option>
+                    <option value="3">3rd Year</option>
+                    <option value="4">4th Year</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" name="password" class="form-control" placeholder="Set student password" required
+                    minlength="4">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success" style="margin-top: 0.5rem;">
+            <i class="fas fa-plus"></i> Add Student
+        </button>
+    </form>
+</div>
+
+<!-- Student List -->
+<div class="card">
+    <div class="card-title"
+        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <span><i class="fas fa-list"></i> Student List</span>
+        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+            <a href="{{ url_for('dashboard.download_students') }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-download"></i> All CSV
+            </a>
+            <a href="{{ url_for('dashboard.download_students_by_risk', risk_level='Low') }}" class="btn btn-sm"
+                style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; border: none;">
+                <i class="fas fa-shield-alt"></i> Low Risk
+            </a>
+            <a href="{{ url_for('dashboard.download_students_by_risk', risk_level='Medium') }}" class="btn btn-sm"
+                style="background: linear-gradient(135deg, #d97706, #fbbf24); color: #fff; border: none;">
+                <i class="fas fa-exclamation-triangle"></i> Medium Risk
+            </a>
+            <a href="{{ url_for('dashboard.download_students_by_risk', risk_level='High') }}" class="btn btn-sm"
+                style="background: linear-gradient(135deg, #dc2626, #ef4444); color: #fff; border: none;">
+                <i class="fas fa-skull-crossbones"></i> High Risk
+            </a>
+        </div>
+    </div>
+
+    {% if student_data %}
+    <!-- Search & Filter Bar -->
+    <div class="search-filter-bar">
+        <div class="search-box">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="staffSearch" placeholder="Search by name, reg no, or department...">
+        </div>
+        <select id="staffFilterDept" class="filter-select">
+            <option value="">All Departments</option>
+            <option value="CSE">CSE</option>
+            <option value="ECE">ECE</option>
+            <option value="EEE">EEE</option>
+            <option value="MECH">MECH</option>
+            <option value="CIVIL">CIVIL</option>
+            <option value="IT">IT</option>
+            <option value="AIDS">AIDS</option>
+            <option value="AIML">AIML</option>
+        </select>
+        <select id="staffFilterRisk" class="filter-select">
+            <option value="">All Risk</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+        </select>
+        <select id="staffFilterResult" class="filter-select">
+            <option value="">All Status</option>
+            <option value="Pass">Pass</option>
+            <option value="Fail">Fail</option>
+            <option value="Pending">Pending</option>
+        </select>
+    </div>
+
+    <div class="table-container">
+        <table id="staffStudentTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Reg No</th>
+                    <th>Name</th>
+                    <th>Dept</th>
+                    <th>Year</th>
+                    <th>Internal Avg</th>
+                    <th>Attend %</th>
+                    <th>Result</th>
+                    <th>Risk</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in student_data %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td style="font-weight: 600; color: var(--accent-cyan);">{{ item.student.reg_no }}</td>
+                    <td style="font-weight: 500; color: var(--text-primary);">{{ item.student.name }}</td>
+                    <td>{{ item.student.dept }}</td>
+                    <td>{{ item.student.year }}</td>
+                    <td>
+                        {% if item.academic %}
+                        {{ item.academic.internal_avg() }}
+                        {% else %}
+                        <span style="color: var(--text-muted);">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.academic %}
+                        {{ item.academic.attendance }}%
+                        {% else %}
+                        <span style="color: var(--text-muted);">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.academic and item.academic.prediction_result %}
+                        <span class="result-{{ item.academic.prediction_result|lower }}">
+                            {{ item.academic.prediction_result }}
+                        </span>
+                        {% else %}
+                        <span style="color: var(--text-muted);">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.academic and item.academic.risk_level %}
+                        <span class="risk-{{ item.academic.risk_level|lower }}">
+                            {{ item.academic.risk_level }}
+                        </span>
+                        {% else %}
+                        <span style="color: var(--text-muted);">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="white-space: nowrap;">
+                        <!-- Edit Student Button -->
+                        <button type="button" class="btn btn-sm" title="Edit Student"
+                            style="background: linear-gradient(135deg, #6366f1, #818cf8); color: #fff; border: none;"
+                            onclick="openEditModal('{{ item.student.reg_no }}', '{{ item.student.name }}', '{{ item.student.dept }}', '{{ item.student.year }}')">
+                            <i class="fas fa-user-edit"></i>
+                        </button>
+
+                        <!-- Enter Marks Button -->
+                        <a href="{{ url_for('dashboard.enter_marks', reg_no=item.student.reg_no) }}"
+                            class="btn btn-primary btn-sm" title="Enter Marks">
+                            <i class="fas fa-edit"></i>
+                        </a>
+
+                        <!-- Run Prediction Button -->
+                        {% if item.academic %}
+                        <form method="POST"
+                            action="{{ url_for('dashboard.run_prediction', reg_no=item.student.reg_no) }}"
+                            style="display: inline;">
+                            <button type="submit" class="btn btn-warning btn-sm" title="Run Prediction">
+                                <i class="fas fa-brain"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        <!-- Delete Button -->
+                        <form method="POST"
+                            action="{{ url_for('dashboard.delete_student', reg_no=item.student.reg_no) }}"
+                            style="display: inline;"
+                            onsubmit="showCustomConfirm(event, this, 'You are about to delete the student {{ item.student.name }}. All their data and marks will be permanently lost.');">
+                            <button type="submit" class="btn btn-danger btn-sm" title="Delete Student">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="pagination" id="staffStudentTable_pagination"></div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-user-graduate"></i>
+        <p>No students added yet</p>
+        <p style="font-size: 0.8rem;">Use the form above to add your first student</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Prediction Results Section -->
+<div class="card" style="margin-top: 2rem;">
+    <div class="card-title">
+        <i class="fas fa-brain"></i> Prediction Results
+    </div>
+
+    {% set predicted_students = student_data|selectattr('academic')|selectattr('academic.prediction_result')|list %}
+
+    {% if predicted_students %}
+    <div class="grid-2" style="margin-top: 1rem;">
+        {% for item in predicted_students %}
+        <div
+            style="background: var(--bg-primary); border-radius: var(--radius-sm); padding: 1.2rem; border: 1px solid var(--border-color);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div>
+                    <div style="font-weight: 700; color: var(--text-primary); font-size: 1rem;">
+                        {{ item.student.name }}
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--accent-cyan);">
+                        {{ item.student.reg_no }} • {{ item.student.dept }} • Year {{ item.student.year }}
+                    </div>
+                </div>
+                <span class="result-{{ item.academic.prediction_result|lower }}" style="font-size: 1.3rem;">
+                    {% if item.academic.prediction_result == 'Pass' %}
+                    <i class="fas fa-check-circle"></i>
+                    {% else %}
+                    <i class="fas fa-times-circle"></i>
+                    {% endif %}
+                    {{ item.academic.prediction_result }}
+                </span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; text-align: center;">
+                <div style="background: var(--bg-card); padding: 0.7rem; border-radius: 8px;">
+                    <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Internal Avg
+                    </div>
+                    <div style="font-size: 1.2rem; font-weight: 700; color: var(--accent-blue);">{{
+                        item.academic.internal_avg() }}</div>
+                </div>
+                <div style="background: var(--bg-card); padding: 0.7rem; border-radius: 8px;">
+                    <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">GPA</div>
+                    <div style="font-size: 1.2rem; font-weight: 700; color: var(--accent-cyan);">{{
+                        item.academic.prev_sem_gpa }}</div>
+                </div>
+                <div style="background: var(--bg-card); padding: 0.7rem; border-radius: 8px;">
+                    <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Risk Level
+                    </div>
+                    <div class="risk-{{ item.academic.risk_level|lower }}" style="font-size: 1.1rem; font-weight: 700;">
+                        {% if item.academic.risk_level == 'Low' %}
+                        <i class="fas fa-shield-alt"></i>
+                        {% elif item.academic.risk_level == 'Medium' %}
+                        <i class="fas fa-exclamation-triangle"></i>
+                        {% else %}
+                        <i class="fas fa-skull-crossbones"></i>
+                        {% endif %}
+                        {{ item.academic.risk_level }}
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 0.8rem; display: flex; gap: 0.5rem;">
+                <a href="{{ url_for('dashboard.enter_marks', reg_no=item.student.reg_no) }}"
+                    class="btn btn-primary btn-sm" style="flex: 1; justify-content: center;">
+                    <i class="fas fa-edit"></i> Edit Marks
+                </a>
+                <form method="POST" action="{{ url_for('dashboard.run_prediction', reg_no=item.student.reg_no) }}"
+                    style="flex: 1;">
+                    <button type="submit" class="btn btn-warning btn-sm" style="width: 100%; justify-content: center;">
+                        <i class="fas fa-sync-alt"></i> Re-Predict
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-chart-bar"></i>
+        <p>No predictions yet</p>
+        <p style="font-size: 0.8rem;">Add students → Enter marks → Click the <i class="fas fa-brain"></i> button to run
+            prediction</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Edit Student Modal -->
+<div id="editStudentModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; backdrop-filter:blur(4px); justify-content:center; align-items:center;">
+    <div style="background:var(--bg-card); border-radius:var(--radius-md); padding:2rem; width:90%; max-width:500px; border:1px solid var(--border-color); box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+            <h3 style="margin:0; color:var(--text-primary);"><i class="fas fa-user-edit" style="color:#818cf8;"></i> Edit Student</h3>
+            <button type="button" onclick="closeEditModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+        <form id="editStudentForm" method="POST">
+            <div class="form-group">
+                <label class="form-label">Register Number</label>
+                <input type="text" id="editRegNo" class="form-control" readonly style="opacity:0.6; cursor:not-allowed;">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Student Name</label>
+                <input type="text" name="name" id="editName" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Department</label>
+                <select name="dept" id="editDept" class="form-control" required>
+                    <option value="CSE">CSE</option>
+                    <option value="ECE">ECE</option>
+                    <option value="EEE">EEE</option>
+                    <option value="MECH">MECH</option>
+                    <option value="CIVIL">CIVIL</option>
+                    <option value="IT">IT</option>
+                    <option value="AIDS">AIDS</option>
+                    <option value="AIML">AIML</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Year</label>
+                <select name="year" id="editYear" class="form-control" required>
+                    <option value="1">1st Year</option>
+                    <option value="2">2nd Year</option>
+                    <option value="3">3rd Year</option>
+                    <option value="4">4th Year</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">New Password <span style="color:var(--text-muted); font-size:0.8rem;">(leave blank to keep current)</span></label>
+                <input type="password" name="password" class="form-control" placeholder="Min 4 characters" minlength="4">
+            </div>
+            <div style="display:flex; gap:0.8rem; margin-top:1.2rem;">
+                <button type="submit" class="btn btn-success" style="flex:1;">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+                <button type="button" class="btn" onclick="closeEditModal()" style="flex:1; background:var(--bg-primary); color:var(--text-secondary); border:1px solid var(--border-color);">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Student Messages Inbox -->
+<div class="card" id="student-messages" style="margin-top: 2rem;">
+    <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+        <span><i class="fas fa-envelope"></i> Student Messages
+            {% if unread_msg_count > 0 %}
+            <span style="display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 12px; background: var(--accent-red); color: white; font-size: 0.7rem; font-weight: 700; margin-left: 8px;">{{ unread_msg_count }}</span>
+            {% endif %}
+        </span>
+    </div>
+
+    {% if messages %}
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for msg in messages %}
+        <div style="padding: 1rem 1.2rem; border-radius: var(--radius-sm); background: var(--bg-primary); border: 1px solid var(--border-color); {% if not msg.is_read %}border-left: 3px solid var(--accent-blue);{% endif %}">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                <div>
+                    <span style="display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.68rem; font-weight: 600; margin-right: 6px; background: rgba(102,126,234,0.12); color: var(--accent-blue);">
+                        <i class="fas fa-user-graduate"></i>
+                        {% set sender_student = [] %}
+                        {% for item in student_data %}
+                            {% if item.student.id == msg.sender_id %}
+                                {{ item.student.name }} ({{ item.student.reg_no }})
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                    <span style="font-weight: 700; font-size: 0.92rem; color: var(--text-primary);">{{ msg.subject }}</span>
+                    {% if not msg.is_read %}
+                    <span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 700; background: var(--accent-blue); color: white; margin-left: 6px;">NEW</span>
+                    <form method="POST" action="{{ url_for('dashboard.mark_staff_message_read', msg_id=msg.id) }}" style="display: inline; margin-left: 8px;">
+                        <button type="submit" style="background: rgba(124,143,255,0.1); color: var(--accent-blue); border: 1px solid rgba(124,143,255,0.2); border-radius: 4px; padding: 2px 8px; font-size: 0.65rem; font-weight: 700; cursor: pointer;">
+                            <i class="fas fa-check"></i> Mark Read
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                <span style="font-size: 0.72rem; color: var(--text-muted);">{{ msg.created_at.strftime('%d %b %Y, %I:%M %p') }}</span>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">{{ msg.content }}</div>
+
+            <!-- Existing Replies -->
+            {% for reply in msg.replies %}
+            <div style="margin-top: 10px; margin-left: 16px; padding: 10px 14px; border-left: 2px solid var(--accent-green); border-radius: 0 8px 8px 0; background: rgba(0,214,143,0.04);">
+                <span style="display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.68rem; font-weight: 600; background: rgba(0,214,143,0.12); color: var(--accent-green); margin-bottom: 4px;">
+                    <i class="fas fa-user-tie"></i> You (Staff)
+                </span>
+                <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5;">{{ reply.content }}</div>
+                <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 4px;">{{ reply.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+            </div>
+            {% endfor %}
+
+            <!-- Reply Form -->
+            <form method="POST" action="{{ url_for('dashboard.reply_message', msg_id=msg.id) }}" style="margin-top: 10px;">
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" name="content" placeholder="Write your reply..." required
+                        style="flex: 1; padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-size: 0.85rem; outline: none;">
+                    <button type="submit" class="btn btn-primary btn-sm" style="white-space: nowrap;">
+                        <i class="fas fa-reply"></i> Reply
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <p>No messages from students</p>
+        <p style="font-size: 0.8rem;">Student messages will appear here</p>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openEditModal(regNo, name, dept, year) {
+        document.getElementById('editRegNo').value = regNo;
+        document.getElementById('editName').value = name;
+        document.getElementById('editDept').value = dept;
+        document.getElementById('editYear').value = year;
+        document.getElementById('editStudentForm').action = '/dashboard/edit-student/' + regNo;
+        var modal = document.getElementById('editStudentModal');
+        modal.style.display = 'flex';
+    }
+
+    function closeEditModal() {
+        document.getElementById('editStudentModal').style.display = 'none';
+    }
+
+    // Close modal on clicking outside
+    document.getElementById('editStudentModal').addEventListener('click', function(e) {
+        if (e.target === this) closeEditModal();
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeEditModal();
+    });
+
+    // Initialize search, filter & pagination
+    document.addEventListener('DOMContentLoaded', function() {
+        initSearchFilter('staffStudentTable', 'staffSearch', [
+            { id: 'staffFilterDept', col: 3 },
+            { id: 'staffFilterRisk', col: 8 },
+            { id: 'staffFilterResult', col: 7 }
+        ]);
+    });
+</script>
+{% endblock %}

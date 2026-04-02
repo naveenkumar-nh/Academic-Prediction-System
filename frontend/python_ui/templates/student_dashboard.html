@@ -1,0 +1,1304 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 id="greetingHeader"><i class="fas fa-user-graduate"></i> Welcome, {{ student.name }}</h1>
+    <p id="greetingSubtext">View your academic details and prediction results</p>
+</div>
+
+<!-- Student Info -->
+<div class="grid-4" style="margin-bottom: 2rem;">
+    <div class="stat-card">
+        <div class="stat-value" style="font-size: 1.2rem;">{{ student.reg_no }}</div>
+        <div class="stat-label">Register Number</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" style="font-size: 1.2rem;">{{ student.dept }}</div>
+        <div class="stat-label">Department</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ student.year }}</div>
+        <div class="stat-label">Year</div>
+    </div>
+    <div class="stat-card">
+        {% if prediction %}
+        <div class="stat-value result-{{ prediction.prediction_result|lower }}" style="font-size: 1.5rem;">
+            {{ prediction.prediction_result }}
+        </div>
+        {% else %}
+        <div class="stat-value" style="font-size: 1rem; color: var(--text-muted);">Pending</div>
+        {% endif %}
+        <div class="stat-label">Prediction Result</div>
+    </div>
+</div>
+
+{% if academic %}
+<!-- Performance Comparison Gauge -->
+<style>
+    .gauge-card {
+        margin-bottom: 2rem;
+    }
+
+    /* ===== RISK LEVEL BADGE ANIMATION ===== */
+    .risk-badge-animated {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border-radius: 14px;
+        font-size: 1.3rem;
+        font-weight: 800;
+        position: relative;
+        animation: riskPulse 2s ease-in-out infinite;
+    }
+
+    .risk-badge-animated.risk-high {
+        background: rgba(248, 113, 113, 0.15);
+        box-shadow: 0 0 20px rgba(248, 113, 113, 0.3);
+    }
+
+    .risk-badge-animated.risk-medium {
+        background: rgba(251, 191, 36, 0.15);
+        box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+    }
+
+    .risk-badge-animated.risk-low {
+        background: rgba(52, 211, 153, 0.15);
+        box-shadow: 0 0 20px rgba(52, 211, 153, 0.3);
+    }
+
+    @keyframes riskPulse {
+        0%, 100% {
+            transform: scale(1);
+            filter: brightness(1);
+        }
+        50% {
+            transform: scale(1.05);
+            filter: brightness(1.2);
+        }
+    }
+
+    .risk-badge-animated.risk-high {
+        animation: riskPulse 2s ease-in-out infinite, riskGlowHigh 2s ease-in-out infinite;
+    }
+
+    .risk-badge-animated.risk-medium {
+        animation: riskPulse 2.5s ease-in-out infinite, riskGlowMedium 2.5s ease-in-out infinite;
+    }
+
+    .risk-badge-animated.risk-low {
+        animation: riskPulse 3s ease-in-out infinite, riskGlowLow 3s ease-in-out infinite;
+    }
+
+    @keyframes riskGlowHigh {
+        0%, 100% { box-shadow: 0 0 15px rgba(248, 113, 113, 0.2); }
+        50% { box-shadow: 0 0 35px rgba(248, 113, 113, 0.5), 0 0 60px rgba(248, 113, 113, 0.2); }
+    }
+
+    @keyframes riskGlowMedium {
+        0%, 100% { box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); }
+        50% { box-shadow: 0 0 30px rgba(251, 191, 36, 0.4), 0 0 50px rgba(251, 191, 36, 0.15); }
+    }
+
+    @keyframes riskGlowLow {
+        0%, 100% { box-shadow: 0 0 15px rgba(52, 211, 153, 0.2); }
+        50% { box-shadow: 0 0 25px rgba(52, 211, 153, 0.35), 0 0 45px rgba(52, 211, 153, 0.12); }
+    }
+
+    /* Greeting emoji bounce */
+    .greeting-emoji {
+        display: inline-block;
+        animation: emojiBounce 2s ease-in-out infinite;
+        font-style: normal;
+    }
+
+    @keyframes emojiBounce {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        25% { transform: translateY(-4px) rotate(-5deg); }
+        75% { transform: translateY(-2px) rotate(5deg); }
+    }
+
+    .gauge-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 1.5rem 0 0.5rem;
+    }
+
+    .gauge-svg-wrap {
+        position: relative;
+        width: 280px;
+        height: 160px;
+    }
+
+    .gauge-svg-wrap svg {
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+    }
+
+    .gauge-center-text {
+        position: absolute;
+        bottom: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
+    }
+
+    .gauge-score-value {
+        font-size: 2.8rem;
+        font-weight: 900;
+        line-height: 1;
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .gauge-score-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+        margin-top: 2px;
+    }
+
+    .gauge-rating {
+        margin-top: 12px;
+        padding: 6px 20px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    .gauge-rating.excellent {
+        background: rgba(52, 211, 153, 0.15);
+        color: #34d399;
+    }
+
+    .gauge-rating.good {
+        background: rgba(124, 143, 255, 0.15);
+        color: #7c8fff;
+    }
+
+    .gauge-rating.average {
+        background: rgba(251, 191, 36, 0.15);
+        color: #fbbf24;
+    }
+
+    .gauge-rating.needs-improvement {
+        background: rgba(248, 113, 113, 0.15);
+        color: #f87171;
+    }
+
+    .gauge-legend {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin-top: 1.2rem;
+        flex-wrap: wrap;
+    }
+
+    .gauge-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.88rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+    }
+
+    .gauge-legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .gauge-legend-val {
+        font-weight: 800;
+        font-size: 1rem;
+    }
+
+    .gauge-delta {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        margin-top: 10px;
+    }
+
+    .gauge-delta.positive {
+        background: rgba(52, 211, 153, 0.12);
+        color: #34d399;
+    }
+
+    .gauge-delta.negative {
+        background: rgba(248, 113, 113, 0.12);
+        color: #f87171;
+    }
+
+    .gauge-delta.neutral {
+        background: rgba(124, 143, 255, 0.12);
+        color: #7c8fff;
+    }
+
+    /* Tick mark labels */
+    .gauge-tick-label {
+        font-size: 0.65rem;
+        font-weight: 600;
+        fill: var(--text-muted);
+    }
+</style>
+<div class="card gauge-card">
+    <div class="card-title">
+        <i class="fas fa-tachometer-alt"></i> Performance Comparison
+    </div>
+    <div class="gauge-container">
+        <div class="gauge-svg-wrap">
+            <svg viewBox="0 0 280 160" id="perfGauge">
+                <defs>
+                    <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#f87171" />
+                        <stop offset="35%" stop-color="#fbbf24" />
+                        <stop offset="65%" stop-color="#7c8fff" />
+                        <stop offset="100%" stop-color="#34d399" />
+                    </linearGradient>
+                    <linearGradient id="gaugeBg" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="rgba(255,255,255,0.04)" />
+                        <stop offset="100%" stop-color="rgba(255,255,255,0.04)" />
+                    </linearGradient>
+                    <filter id="gaugeGlow">
+                        <feGaussianBlur stdDeviation="3" result="glow" />
+                        <feMerge>
+                            <feMergeNode in="glow" />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
+                </defs>
+                <!-- Background arc -->
+                <path d="M 30 145 A 110 110 0 0 1 250 145" fill="none" stroke="url(#gaugeBg)" stroke-width="18"
+                    stroke-linecap="round" />
+                <!-- Colored arc (animated via JS) -->
+                <path id="gaugeArc" d="M 30 145 A 110 110 0 0 1 250 145" fill="none" stroke="url(#gaugeGrad)"
+                    stroke-width="18" stroke-linecap="round" stroke-dasharray="0 999" filter="url(#gaugeGlow)" />
+                <!-- Tick marks -->
+                <text x="22" y="158" class="gauge-tick-label" text-anchor="middle">0</text>
+                <text x="68" y="82" class="gauge-tick-label" text-anchor="middle">25</text>
+                <text x="140" y="48" class="gauge-tick-label" text-anchor="middle">50</text>
+                <text x="212" y="82" class="gauge-tick-label" text-anchor="middle">75</text>
+                <text x="258" y="158" class="gauge-tick-label" text-anchor="middle">100</text>
+                <!-- Department average needle -->
+                <line id="deptNeedle" x1="140" y1="145" x2="140" y2="50" stroke="#a855f7" stroke-width="2.5"
+                    stroke-linecap="round" opacity="0.85" />
+                <circle id="deptNeedleDot" cx="140" cy="50" r="5" fill="#a855f7" opacity="0.9" />
+            </svg>
+            <div class="gauge-center-text">
+                <div class="gauge-score-value" id="gaugeValue">0</div>
+                <div class="gauge-score-label">Your Score</div>
+            </div>
+        </div>
+
+        <!-- Performance Rating -->
+        {% if performance_score >= 80 %}
+        <div class="gauge-rating excellent"><i class="fas fa-trophy" style="margin-right:6px;"></i> Excellent</div>
+        {% elif performance_score >= 60 %}
+        <div class="gauge-rating good"><i class="fas fa-thumbs-up" style="margin-right:6px;"></i> Good</div>
+        {% elif performance_score >= 40 %}
+        <div class="gauge-rating average"><i class="fas fa-minus-circle" style="margin-right:6px;"></i> Average</div>
+        {% else %}
+        <div class="gauge-rating needs-improvement"><i class="fas fa-arrow-down" style="margin-right:6px;"></i> Needs
+            Improvement</div>
+        {% endif %}
+
+        <!-- Legend -->
+        <div class="gauge-legend">
+            <div class="gauge-legend-item">
+                <div class="gauge-legend-dot" style="background: var(--gradient-primary);"></div>
+                You: <span class="gauge-legend-val">{{ performance_score }}</span>
+            </div>
+            <div class="gauge-legend-item">
+                <div class="gauge-legend-dot" style="background: #a855f7;"></div>
+                Dept. Avg: <span class="gauge-legend-val">{{ dept_avg_score }}</span>
+            </div>
+        </div>
+
+        <!-- Delta badge -->
+        {% set delta = (performance_score - dept_avg_score) | round(1) %}
+        {% if delta > 0 %}
+        <div class="gauge-delta positive"><i class="fas fa-arrow-up"></i> {{ delta }} above dept. average</div>
+        {% elif delta < 0 %} <div class="gauge-delta negative"><i class="fas fa-arrow-down"></i> {{ (delta | abs) }}
+            below dept. average
+    </div>
+    {% else %}
+    <div class="gauge-delta neutral"><i class="fas fa-equals"></i> Equal to dept. average</div>
+    {% endif %}
+</div>
+</div>
+
+<!-- Marks Progress Rings — Premium Redesign -->
+<style>
+    .marks-section { margin-bottom: 2rem; }
+
+    .marks-section .section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .marks-section .section-header .header-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,162,0.2));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        color: #7c8fff;
+        border: 1px solid rgba(124,143,255,0.2);
+    }
+
+    .marks-section .section-header h3 {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .marks-section .section-header h3 span {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--text-muted);
+        margin-left: 8px;
+    }
+
+    /* ── Metric Cards Grid ── */
+    .metric-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+
+    @media (max-width: 900px) {
+        .metric-cards-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 500px) {
+        .metric-cards-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Individual Metric Card ── */
+    .metric-card {
+        position: relative;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        padding: 24px 16px 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: metricCardIn 0.6s ease forwards;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+
+    .metric-card:nth-child(1) { animation-delay: 0.1s; }
+    .metric-card:nth-child(2) { animation-delay: 0.2s; }
+    .metric-card:nth-child(3) { animation-delay: 0.3s; }
+    .metric-card:nth-child(4) { animation-delay: 0.4s; }
+    .metric-card:nth-child(5) { animation-delay: 0.5s; }
+    .metric-card:nth-child(6) { animation-delay: 0.6s; }
+
+    @keyframes metricCardIn {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Gradient border glow on hover */
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 16px;
+        padding: 1px;
+        background: linear-gradient(135deg, var(--card-accent, #7c8fff) 0%, transparent 60%);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask-composite: exclude;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+
+    .metric-card:hover::before {
+        opacity: 1;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-6px);
+        background: rgba(255,255,255,0.06);
+        border-color: rgba(255,255,255,0.15);
+        box-shadow:
+            0 20px 40px rgba(0,0,0,0.3),
+            0 0 30px rgba(102,126,234,0.08),
+            inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    /* ── Ring Container ── */
+    .metric-ring-wrap {
+        position: relative;
+        width: 130px;
+        height: 130px;
+    }
+
+    .metric-ring-wrap svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+    }
+
+    .metric-ring-bg {
+        fill: none;
+        stroke: rgba(255,255,255,0.04);
+        stroke-width: 10;
+    }
+
+    .metric-ring-track {
+        fill: none;
+        stroke: rgba(255,255,255,0.02);
+        stroke-width: 10;
+        stroke-dasharray: 4 6;
+    }
+
+    .metric-ring-fill {
+        fill: none;
+        stroke-width: 10;
+        stroke-linecap: round;
+        stroke-dasharray: 0 999;
+        transition: stroke-dasharray 1.8s cubic-bezier(0.16, 1, 0.3, 1);
+        filter: drop-shadow(0 0 8px var(--ring-glow));
+    }
+
+    /* Center text inside ring */
+    .metric-ring-center {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+    }
+
+    .metric-ring-value {
+        font-size: 1.7rem;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: -0.5px;
+    }
+
+    .metric-ring-max {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        margin-top: 3px;
+        font-weight: 600;
+        opacity: 0.7;
+    }
+
+    /* Label below ring */
+    .metric-label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .metric-label-title {
+        font-size: 0.88rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .metric-label-title i {
+        font-size: 0.72rem;
+        opacity: 0.8;
+    }
+
+    .metric-label-subtitle {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        letter-spacing: 0.3px;
+    }
+
+    /* ── Percentage badge floating top-right ── */
+    .metric-pct-badge {
+        position: absolute;
+        top: 10px;
+        right: 12px;
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.08);
+        color: var(--text-secondary);
+        letter-spacing: 0.3px;
+    }
+
+    /* ══ Internal Average Spotlight Card ══ */
+    .avg-spotlight {
+        margin-top: 1.2rem;
+        position: relative;
+        background: linear-gradient(135deg, rgba(102,126,234,0.08) 0%, rgba(118,75,162,0.08) 50%, rgba(124,143,255,0.04) 100%);
+        border: 1px solid rgba(102,126,234,0.15);
+        border-radius: 20px;
+        padding: 32px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 40px;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: metricCardIn 0.7s ease forwards;
+        animation-delay: 0.75s;
+    }
+
+    .avg-spotlight::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(102,126,234,0.08) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    .avg-spotlight::after {
+        content: '';
+        position: absolute;
+        bottom: -50%;
+        left: -10%;
+        width: 250px;
+        height: 250px;
+        background: radial-gradient(circle, rgba(118,75,162,0.06) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    .avg-spotlight:hover {
+        border-color: rgba(102,126,234,0.3);
+        box-shadow: 0 20px 50px rgba(102,126,234,0.1);
+        transform: translateY(-4px);
+        transition: all 0.4s ease;
+    }
+
+    .avg-ring-wrap {
+        position: relative;
+        width: 160px;
+        height: 160px;
+        flex-shrink: 0;
+    }
+
+    .avg-ring-wrap svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+    }
+
+    .avg-ring-center {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+    }
+
+    .avg-ring-value {
+        font-size: 2.4rem;
+        font-weight: 900;
+        line-height: 1;
+        background: linear-gradient(135deg, #667eea, #a855f7, #7c8fff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .avg-ring-max {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+        font-weight: 600;
+    }
+
+    .avg-info {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .avg-info .avg-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .avg-info .avg-title i {
+        color: #fbbf24;
+        font-size: 1rem;
+    }
+
+    .avg-info .avg-desc {
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        line-height: 1.5;
+        max-width: 280px;
+    }
+
+    .avg-info .avg-breakdown {
+        display: flex;
+        gap: 12px;
+        margin-top: 4px;
+        flex-wrap: wrap;
+    }
+
+    .avg-info .avg-breakdown .avg-chip {
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        color: var(--text-secondary);
+    }
+
+    .avg-info .avg-breakdown .avg-chip span {
+        font-weight: 800;
+        margin-left: 4px;
+    }
+
+    @media (max-width: 700px) {
+        .avg-spotlight {
+            flex-direction: column;
+            gap: 20px;
+            text-align: center;
+        }
+        .avg-info { align-items: center; }
+        .avg-info .avg-breakdown { justify-content: center; }
+    }
+</style>
+
+<div class="card marks-section">
+    <div class="section-header">
+        <div class="header-icon"><i class="fas fa-chart-pie"></i></div>
+        <h3>Academic Metrics <span>— Score Breakdown</span></h3>
+    </div>
+
+    <div class="metric-cards-grid">
+        {% set uni_color = '#667eea' %}
+        {% set ring_data = [
+        ('Internal 1', academic.internal_1, 100, 'fa-pen-fancy', 'Test Score'),
+        ('Internal 2', academic.internal_2, 100, 'fa-pen-nib', 'Test Score'),
+        ('Internal 3', academic.internal_3, 100, 'fa-pen-ruler', 'Test Score'),
+        ('Assignment', academic.assignment, 30, 'fa-tasks', 'Out of 30'),
+        ('Attendance', academic.attendance, 100, 'fa-calendar-check', 'Percentage'),
+        ('Study Hrs', academic.study_hours_per_day, 8, 'fa-clock', 'Hours / Day')
+        ] %}
+
+        {% for label, value, max_val, icon, subtitle in ring_data %}
+        {% set pct = (value / max_val * 100) | round(1) if max_val > 0 else 0 %}
+        {% set pct_capped = [pct, 100] | min %}
+        <div class="metric-card">
+            <div class="metric-pct-badge">{{ pct_capped }}%</div>
+            <div class="metric-ring-wrap">
+                <svg viewBox="0 0 120 120">
+                    <defs>
+                        <linearGradient id="mGrad{{ loop.index }}" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#667eea" />
+                            <stop offset="100%" stop-color="#764ba2" />
+                        </linearGradient>
+                    </defs>
+                    <circle class="metric-ring-bg" cx="60" cy="60" r="48" />
+                    <circle class="metric-ring-track" cx="60" cy="60" r="48" />
+                    <circle class="metric-ring-fill" cx="60" cy="60" r="48"
+                        stroke="url(#mGrad{{ loop.index }})"
+                        data-pct="{{ pct_capped }}"
+                        style="--ring-glow: rgba(102,126,234,0.4);" />
+                </svg>
+                <div class="metric-ring-center">
+                    <div class="metric-ring-value" style="color: #667eea;">{{ value }}</div>
+                    <div class="metric-ring-max">/{{ max_val }}</div>
+                </div>
+            </div>
+            <div class="metric-label">
+                <div class="metric-label-title" style="color: #667eea;"><i class="fas {{ icon }}"></i> {{ label }}</div>
+                <div class="metric-label-subtitle">{{ subtitle }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ══ Internal Average — Spotlight ══ -->
+    {% set avg = academic.internal_avg() %}
+    <div class="avg-spotlight">
+        <div class="avg-ring-wrap">
+            <svg viewBox="0 0 120 120">
+                <defs>
+                    <linearGradient id="avgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#667eea" />
+                        <stop offset="50%" stop-color="#a855f7" />
+                        <stop offset="100%" stop-color="#7c8fff" />
+                    </linearGradient>
+                </defs>
+                <circle class="metric-ring-bg" cx="60" cy="60" r="48" />
+                <circle class="metric-ring-track" cx="60" cy="60" r="48" />
+                <circle class="metric-ring-fill" cx="60" cy="60" r="48"
+                    stroke="url(#avgGrad)"
+                    data-pct="{{ avg }}"
+                    style="--ring-glow: #667eea50;" />
+            </svg>
+            <div class="avg-ring-center">
+                <div class="avg-ring-value">{{ avg }}</div>
+                <div class="avg-ring-max">/100</div>
+            </div>
+        </div>
+        <div class="avg-info">
+            <div class="avg-title"><i class="fas fa-star"></i> Internal Average</div>
+            <div class="avg-desc">Combined performance score calculated from all three internal assessments and assignment marks.</div>
+            <div class="avg-breakdown">
+                <div class="avg-chip">IT1 <span style="color: #7c8fff;">{{ academic.internal_1 }}</span></div>
+                <div class="avg-chip">IT2 <span style="color: #a855f7;">{{ academic.internal_2 }}</span></div>
+                <div class="avg-chip">IT3 <span style="color: #22d3ee;">{{ academic.internal_3 }}</span></div>
+                <div class="avg-chip">Assgn <span style="color: #f97316;">{{ academic.assignment }}</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2" style="margin-bottom: 2rem;">
+    <!-- Academic Details -->
+    <div class="card">
+        <div class="card-title">
+            <i class="fas fa-clipboard-list"></i> Academic Details
+        </div>
+        <table>
+            <tr>
+                <td style="font-weight: 500;"><i class="fas fa-pen"
+                        style="color: var(--accent-blue); margin-right: 8px;"></i> Internal Test 1</td>
+                <td style="text-align: right; font-weight: 700;">{{ academic.internal_1 }}</td>
+            </tr>
+            <tr>
+                <td style="font-weight: 500;"><i class="fas fa-pen"
+                        style="color: var(--accent-blue); margin-right: 8px;"></i> Internal Test 2</td>
+                <td style="text-align: right; font-weight: 700;">{{ academic.internal_2 }}</td>
+            </tr>
+            <tr>
+                <td style="font-weight: 500;"><i class="fas fa-pen"
+                        style="color: var(--accent-blue); margin-right: 8px;"></i> Internal Test 3</td>
+                <td style="text-align: right; font-weight: 700;">{{ academic.internal_3 }}</td>
+            </tr>
+            <tr>
+                <td style="font-weight: 500;"><i class="fas fa-tasks"
+                        style="color: var(--accent-purple); margin-right: 8px;"></i> Assignment</td>
+                <td style="text-align: right; font-weight: 700;">{{ academic.assignment }}</td>
+            </tr>
+            <tr style="background: rgba(102, 126, 234, 0.08);">
+                <td style="font-weight: 700; color: var(--accent-blue);">Internal Average</td>
+                <td style="text-align: right; font-weight: 800; color: var(--accent-blue);">{{ academic.internal_avg()
+                    }}</td>
+            </tr>
+            <tr>
+                <td style="font-weight: 500;"><i class="fas fa-chart-line"
+                        style="color: var(--accent-green); margin-right: 8px;"></i> Previous Sem GPA</td>
+                <td style="text-align: right; font-weight: 700;">{{ academic.prev_sem_gpa }}</td>
+            </tr>
+            <tr>
+                <td style="font-weight: 500;"><i class="fas fa-clock"
+                        style="color: var(--accent-orange); margin-right: 8px;"></i> Study Hours/Day</td>
+                <td style="text-align: right; font-weight: 700;">{{ academic.study_hours_per_day }}</td>
+            </tr>
+            <tr>
+                <td style="font-weight: 500;"><i class="fas fa-calendar-check"
+                        style="color: var(--accent-green); margin-right: 8px;"></i> Attendance</td>
+                <td style="text-align: right; font-weight: 700;">{{ academic.attendance }}%</td>
+            </tr>
+            <tr>
+                <td style="font-weight: 500;"><i class="fas fa-running"
+                        style="color: var(--accent-cyan); margin-right: 8px;"></i> Extra Activity</td>
+                <td style="text-align: right; font-weight: 700;">
+                    {{ 'Yes' if academic.extra_activity else 'No' }}
+                    {% if academic.extra_activity_type %}
+                    ({{ academic.extra_activity_type }})
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Prediction Result -->
+    <div class="card">
+        <div class="card-title">
+            <i class="fas fa-brain"></i> Prediction Result
+        </div>
+
+        {% if prediction %}
+        <div style="text-align: center; padding: 1.5rem 0;">
+            <!-- Result -->
+            <div style="margin-bottom: 1.5rem;">
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;">Result</div>
+                <div style="font-size: 2.5rem; font-weight: 900;"
+                    class="result-{{ prediction.prediction_result|lower }}">
+                    {% if prediction.prediction_result == 'Pass' %}
+                    <i class="fas fa-check-circle"></i>
+                    {% else %}
+                    <i class="fas fa-times-circle"></i>
+                    {% endif %}
+                    {{ prediction.prediction_result }}
+                </div>
+            </div>
+
+            <!-- Grade & Risk -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                <div style="background: var(--bg-primary); padding: 1rem; border-radius: var(--radius-sm);">
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Grade</div>
+                    <div style="font-size: 1.8rem; font-weight: 800; color: var(--accent-blue);">{{ prediction.grade }}
+                    </div>
+                </div>
+                <div style="background: var(--bg-primary); padding: 1rem; border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">Risk Level</div>
+                    <div class="risk-badge-animated risk-{{ prediction.risk_level|lower }}">
+                        {% if prediction.risk_level == 'Low' %}
+                        <i class="fas fa-shield-alt"></i>
+                        {% elif prediction.risk_level == 'Medium' %}
+                        <i class="fas fa-exclamation-triangle"></i>
+                        {% else %}
+                        <i class="fas fa-skull-crossbones"></i>
+                        {% endif %}
+                        {{ prediction.risk_level }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Internal Average -->
+            <div style="background: var(--bg-primary); padding: 1rem; border-radius: var(--radius-sm);">
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Internal Average</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent-cyan);">{{ prediction.internal_avg
+                    }}</div>
+            </div>
+        </div>
+
+        <!-- Suggestions -->
+        {% if suggestions %}
+        <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+            <div style="font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem; color: var(--accent-orange);">
+                <i class="fas fa-lightbulb"></i> Suggestions for Improvement
+            </div>
+            {% for suggestion in suggestions %}
+            <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px;
+                        padding: 10px 14px; background: var(--bg-primary); border-radius: var(--radius-sm);
+                        border-left: 3px solid var(--accent-orange); font-size: 0.9rem; color: var(--text-secondary);">
+                <i class="fas fa-chevron-right"
+                    style="color: var(--accent-orange); margin-top: 3px; font-size: 0.7rem;"></i>
+                {{ suggestion }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Premium Download Button -->
+        <style>
+            .premium-download-btn {
+                display: inline-flex;
+                align-items: center;
+                background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.2) 100%);
+                border: 1px solid rgba(16, 185, 129, 0.3);
+                border-radius: 16px;
+                padding: 12px 24px 12px 16px;
+                text-decoration: none;
+                color: var(--text-primary);
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                box-shadow: 0 10px 30px rgba(5, 150, 105, 0.1);
+                gap: 16px;
+                position: relative;
+                overflow: hidden;
+                margin-top: 0.5rem;
+            }
+            
+            .premium-download-btn::before {
+                content: '';
+                position: absolute;
+                top: 0; left: -100%;
+                width: 100%; height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+                transition: all 0.6s ease;
+            }
+
+            .premium-download-btn:hover {
+                transform: translateY(-4px) scale(1.02);
+                box-shadow: 0 15px 35px rgba(5, 150, 105, 0.25);
+                border-color: rgba(16, 185, 129, 0.6);
+                background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.3) 100%);
+            }
+
+            .premium-download-btn:hover::before {
+                left: 100%;
+            }
+
+            .premium-download-btn .btn-icon {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 48px;
+                height: 48px;
+                background: linear-gradient(135deg, #10b981, #059669);
+                border-radius: 12px;
+                color: white;
+                font-size: 1.4rem;
+                box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            }
+
+            .premium-download-btn .btn-text {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                text-align: left;
+            }
+
+            .premium-download-btn .btn-title {
+                font-size: 1.05rem;
+                font-weight: 800;
+                letter-spacing: 0.5px;
+                color: #34d399;
+            }
+
+            .premium-download-btn .btn-subtitle {
+                font-size: 0.75rem;
+                color: var(--text-muted);
+                font-weight: 500;
+                margin-top: 2px;
+            }
+
+            .premium-download-btn .btn-arrow {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-left: 10px;
+                color: rgba(255,255,255,0.3);
+                font-size: 1.2rem;
+                transition: all 0.3s ease;
+            }
+
+            .premium-download-btn:hover .btn-arrow {
+                color: #34d399;
+                transform: translateY(3px);
+            }
+        </style>
+        <div style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 2rem; display: flex; justify-content: center;">
+            <a href="{{ url_for('dashboard.download_prediction') }}" class="premium-download-btn">
+                <div class="btn-icon">
+                    <i class="fas fa-file-pdf"></i>
+                </div>
+                <div class="btn-text">
+                    <span class="btn-title">Download Premium Report</span>
+                    <span class="btn-subtitle">Detailed Performance & Diagnostics</span>
+                </div>
+                <div class="btn-arrow">
+                    <i class="fas fa-download"></i>
+                </div>
+            </a>
+        </div>
+
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-hourglass-half"></i>
+            <p>Prediction not yet available</p>
+            <p style="font-size: 0.8rem;">Your staff will run the prediction after entering your marks</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <i class="fas fa-clipboard"></i>
+        <p>No academic records found</p>
+        <p style="font-size: 0.85rem;">Your staff will add your marks and run the prediction. Please check back later.
+        </p>
+    </div>
+</div>
+{% endif %}
+
+<!-- ══ Ask Staff Messaging Section ══ -->
+<style>
+    .msg-section { margin-top: 2rem; }
+    .msg-section .card-title .badge-count {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 22px; height: 22px; padding: 0 6px;
+        border-radius: 12px; background: var(--danger); color: white;
+        font-size: 0.7rem; font-weight: 700; margin-left: 8px;
+    }
+    .msg-compose { margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); }
+    .msg-compose .form-row-msg { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+    .msg-compose .form-row-msg input,
+    .msg-compose .form-row-msg textarea {
+        width: 100%; padding: 0.75rem 1rem;
+        background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+        border-radius: var(--border-radius-sm); color: var(--text-primary);
+        font-family: 'Inter', sans-serif; font-size: 0.9rem;
+        outline: none; transition: var(--transition);
+    }
+    .msg-compose .form-row-msg input:focus,
+    .msg-compose .form-row-msg textarea:focus {
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 3px rgba(102,126,234,0.15);
+    }
+    .msg-compose .form-row-msg textarea { resize: vertical; min-height: 80px; }
+    .msg-compose .staff-badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 12px; border-radius: 8px;
+        background: rgba(102,126,234,0.1); color: var(--accent-primary);
+        font-size: 0.78rem; font-weight: 600; margin-bottom: 10px;
+    }
+    .msg-list { display: flex; flex-direction: column; gap: 1rem; }
+    .msg-item {
+        padding: 1rem 1.2rem; border-radius: var(--border-radius-sm);
+        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+        transition: var(--transition);
+    }
+    .msg-item:hover { background: rgba(255,255,255,0.05); }
+    .msg-item.unread { border-left: 3px solid var(--accent-primary); }
+    .msg-item .msg-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 6px; flex-wrap: wrap; gap: 6px;
+    }
+    .msg-item .msg-subject { font-weight: 700; font-size: 0.92rem; color: var(--text-primary); }
+    .msg-item .msg-time { font-size: 0.72rem; color: var(--text-muted); }
+    .msg-item .msg-body { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
+    .msg-item .msg-sender-badge {
+        display: inline-block; padding: 2px 8px; border-radius: 6px;
+        font-size: 0.68rem; font-weight: 600; margin-right: 6px;
+    }
+    .msg-item .msg-sender-badge.you { background: rgba(102,126,234,0.12); color: #7c8fff; }
+    .msg-item .msg-sender-badge.staff { background: rgba(0,214,143,0.12); color: var(--success); }
+    .msg-reply {
+        margin-top: 10px; margin-left: 16px; padding: 10px 14px;
+        border-left: 2px solid var(--success); border-radius: 0 8px 8px 0;
+        background: rgba(0,214,143,0.04);
+    }
+    .msg-reply .msg-sender-badge { margin-bottom: 4px; }
+    .msg-reply .msg-body { font-size: 0.82rem; }
+    .msg-reply .msg-time { font-size: 0.68rem; color: var(--text-muted); margin-top: 4px; }
+    .msg-empty {
+        text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.9rem;
+    }
+</style>
+
+<div class="card msg-section" id="ask-staff">
+    <div class="card-title">
+        <i class="fas fa-comments"></i> Ask Staff
+        {% if unread_count > 0 %}
+        <span class="badge-count">{{ unread_count }}</span>
+        {% endif %}
+    </div>
+
+    <!-- Compose Message -->
+    {% if assigned_staff %}
+    <div class="msg-compose">
+        <div class="staff-badge"><i class="fas fa-user-tie"></i> Sending to: {{ assigned_staff.username }}</div>
+        <form method="POST" action="{{ url_for('dashboard.send_message') }}">
+            <div class="form-row-msg">
+                <input type="text" name="subject" placeholder="Subject (e.g., Doubt in Internal 2)" required>
+                <textarea name="content" placeholder="Write your message here..." required></textarea>
+                <button type="submit" class="btn btn-primary btn-sm" style="width: fit-content;">
+                    <i class="fas fa-paper-plane"></i> Send Message
+                </button>
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <div style="padding: 0.75rem; margin-bottom: 1rem; background: rgba(255,170,0,0.1); border-radius: 8px; color: var(--warning); font-size: 0.85rem;">
+        <i class="fas fa-exclamation-triangle"></i> No staff assigned. Contact admin to get assigned.
+    </div>
+    {% endif %}
+
+    <!-- Message History -->
+    <div class="msg-list">
+        {% if messages %}
+        {% for msg in messages %}
+        <div class="msg-item {% if not msg.is_read and msg.receiver_type == 'student' and msg.receiver_id == student.id %}unread{% endif %}">
+            <div class="msg-header">
+                <div>
+                    <span class="msg-sender-badge you"><i class="fas fa-user-graduate"></i> You</span>
+                    <span class="msg-subject">{{ msg.subject }}</span>
+                    {% if not msg.is_read and msg.receiver_type == 'student' and msg.receiver_id == student.id %}
+                    <form method="POST" action="{{ url_for('dashboard.mark_message_read', msg_id=msg.id) }}" style="display: inline; margin-left: 8px;">
+                        <button type="submit" style="background: rgba(0,214,143,0.1); color: var(--success); border: 1px solid rgba(0,214,143,0.2); border-radius: 4px; padding: 2px 8px; font-size: 0.65rem; font-weight: 700; cursor: pointer;">
+                            <i class="fas fa-check"></i> Mark Read
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                <span class="msg-time">{{ msg.created_at.strftime('%d %b %Y, %I:%M %p') }}</span>
+            </div>
+            <div class="msg-body">{{ msg.content }}</div>
+
+            <!-- Replies -->
+            {% for reply in msg.replies %}
+            <div class="msg-reply {% if not reply.is_read and reply.receiver_type == 'student' and reply.receiver_id == student.id %}unread{% endif %}" {% if not reply.is_read and reply.receiver_type == 'student' and reply.receiver_id == student.id %}style="border-left: 2px solid var(--accent-blue); background: rgba(124,143,255,0.08);"{% endif %}>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <span class="msg-sender-badge staff"><i class="fas fa-user-tie"></i> Staff</span>
+                    {% if not reply.is_read and reply.receiver_type == 'student' and reply.receiver_id == student.id %}
+                    <form method="POST" action="{{ url_for('dashboard.mark_message_read', msg_id=reply.id) }}" style="display: inline;">
+                        <button type="submit" style="background: rgba(0,214,143,0.1); color: var(--success); border: 1px solid rgba(0,214,143,0.2); border-radius: 4px; padding: 2px 8px; font-size: 0.65rem; font-weight: 700; cursor: pointer;">
+                            <i class="fas fa-check"></i> Mark Read
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                <div class="msg-body" style="margin-top: 4px;">{{ reply.content }}</div>
+                <div class="msg-time">{{ reply.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+            </div>
+            {% endfor %}
+
+            <!-- Reply Form -->
+            <form method="POST" action="{{ url_for('dashboard.student_reply_message', msg_id=msg.id) }}" style="margin-top: 10px;">
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" name="content" placeholder="Write your reply..." required
+                        style="flex: 1; padding: 8px 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: var(--text-primary); font-size: 0.85rem; outline: none;">
+                    <button type="submit" class="btn btn-primary btn-sm" style="white-space: nowrap;">
+                        <i class="fas fa-reply"></i> Reply
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="msg-empty">
+            <i class="fas fa-inbox" style="font-size: 2rem; display: block; margin-bottom: 8px;"></i>
+            No messages yet. Send your first query to your staff!
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<div id="gaugeData" data-score="{{ performance_score }}" data-dept="{{ dept_avg_score }}" style="display:none;"></div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // === Welcome Greeting based on time of day ===
+        var hour = new Date().getHours();
+        var greetingText, greetingEmoji, subtextMsg;
+        if (hour >= 5 && hour < 12) {
+            greetingText = 'Good Morning';
+            greetingEmoji = '☀️';
+            subtextMsg = 'Start your day with a review of your academic performance';
+        } else if (hour >= 12 && hour < 17) {
+            greetingText = 'Good Afternoon';
+            greetingEmoji = '🌤️';
+            subtextMsg = 'Check your latest academic updates and predictions';
+        } else if (hour >= 17 && hour < 21) {
+            greetingText = 'Good Evening';
+            greetingEmoji = '🌆';
+            subtextMsg = 'Review your academic progress before winding down';
+        } else {
+            greetingText = 'Hello';
+            greetingEmoji = '🌙';
+            subtextMsg = 'Burning the midnight oil? Check your academic status';
+        }
+        var headerEl = document.getElementById('greetingHeader');
+        var subtextEl = document.getElementById('greetingSubtext');
+        if (headerEl) {
+            headerEl.innerHTML = '<i class="greeting-emoji">' + greetingEmoji + '</i> ' + greetingText + ', {{ student.name }}';
+        }
+        if (subtextEl) {
+            subtextEl.textContent = subtextMsg;
+        }
+
+        // Animate progress rings
+        var circumference = 2 * Math.PI * 48; // r=48
+        document.querySelectorAll('.metric-ring-fill[data-pct]').forEach(function (ring, i) {
+            var pct = parseFloat(ring.getAttribute('data-pct')) || 0;
+            var fillLen = (pct / 100) * circumference;
+            setTimeout(function () {
+                ring.style.strokeDasharray = fillLen + ' ' + (circumference - fillLen);
+            }, 200 + i * 150);
+        });
+
+        // Gauge animation
+        var gaugeDataEl = document.getElementById('gaugeData');
+        if (!gaugeDataEl) return;
+        var studentScore = parseFloat(gaugeDataEl.getAttribute('data-score')) || 0;
+        var deptAvg = parseFloat(gaugeDataEl.getAttribute('data-dept')) || 0;
+        var gaugeArc = document.getElementById('gaugeArc');
+        var gaugeValue = document.getElementById('gaugeValue');
+        var deptNeedle = document.getElementById('deptNeedle');
+        var deptNeedleDot = document.getElementById('deptNeedleDot');
+
+        if (gaugeArc) {
+            // Arc geometry: half-circle from 180 to 0 degrees (left to right)
+            var cx = 140, cy = 145, r = 110;
+            var totalArcLen = Math.PI * r; // half-circle circumference
+
+            // Animate the student score arc
+            var targetLen = (studentScore / 100) * totalArcLen;
+            var duration = 1500;
+            var startTime = null;
+
+            function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+            function animateGauge(timestamp) {
+                if (!startTime) startTime = timestamp;
+                var elapsed = timestamp - startTime;
+                var progress = Math.min(elapsed / duration, 1);
+                var eased = easeOutCubic(progress);
+
+                var currentLen = eased * targetLen;
+                gaugeArc.setAttribute('stroke-dasharray', currentLen + ' ' + (totalArcLen - currentLen));
+
+                // Animate the number
+                var currentVal = Math.round(eased * studentScore);
+                gaugeValue.textContent = currentVal;
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateGauge);
+                }
+            }
+            requestAnimationFrame(animateGauge);
+
+            // Position dept average needle
+            var deptAngle = Math.PI - (deptAvg / 100) * Math.PI;
+            var needleLen = 95;
+            var nx = cx + needleLen * Math.cos(deptAngle);
+            var ny = cy - needleLen * Math.sin(deptAngle);
+            deptNeedle.setAttribute('x2', nx);
+            deptNeedle.setAttribute('y2', ny);
+            deptNeedleDot.setAttribute('cx', nx);
+            deptNeedleDot.setAttribute('cy', ny);
+        }
+    });
+</script>
+{% endblock %}

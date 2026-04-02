@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In — Academic Prediction System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script>
+        (function () {
+            var t = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-main: #050816;
+            --bg-card: rgba(12, 15, 40, 0.75);
+            --text-main: #e8eaff;
+            --text-muted: #6b70a0;
+            --input-bg: rgba(255, 255, 255, 0.04);
+            --input-bg-focus: rgba(255, 255, 255, 0.08);
+            --input-border: rgba(255, 255, 255, 0.08);
+            --input-border-focus: rgba(99, 102, 241, 0.6);
+            --card-border: rgba(255, 255, 255, 0.06);
+            --accent: #6366f1;
+            --accent-2: #8b5cf6;
+            --accent-3: #06b6d4;
+            --glow-1: rgba(99, 102, 241, 0.15);
+            --glow-2: rgba(139, 92, 246, 0.1);
+        }
+
+        [data-theme="light"] {
+            --bg-main: #f0f2ff;
+            --bg-card: rgba(255, 255, 255, 0.9);
+            --text-main: #1e1b4b;
+            --text-muted: #6366a0;
+            --input-bg: rgba(241, 243, 255, 0.8);
+            --input-bg-focus: #ffffff;
+            --input-border: rgba(99, 102, 241, 0.15);
+            --input-border-focus: rgba(99, 102, 241, 0.5);
+            --card-border: rgba(99, 102, 241, 0.1);
+            --glow-1: rgba(99, 102, 241, 0.08);
+            --glow-2: rgba(139, 92, 246, 0.05);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(120deg, #0a0a1a, #111128, #18183a);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease infinite;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        [data-theme="light"] body {
+            background: linear-gradient(120deg, #f0f2f8, #e4e7f0, #d0d7eb);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* ===== ANIMATED PARTICLE CANVAS ===== */
+        #particleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ===== BACKGROUND ORBS ===== */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .orb-1 {
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.2), transparent 70%);
+            top: -200px; left: -150px;
+            animation: orbFloat1 25s ease-in-out infinite;
+        }
+
+        .orb-2 {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.15), transparent 70%);
+            bottom: -200px; right: -150px;
+            animation: orbFloat2 30s ease-in-out infinite;
+        }
+
+        .orb-3 {
+            width: 350px; height: 350px;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.1), transparent 70%);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            animation: orbFloat3 20s ease-in-out infinite;
+        }
+
+        [data-theme="light"] .orb { opacity: 0.4; }
+
+        @keyframes orbFloat1 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(80px, 60px) scale(1.1); }
+            66% { transform: translate(-30px, 90px) scale(0.95); }
+        }
+
+        @keyframes orbFloat2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(-70px, -50px) scale(1.05); }
+            66% { transform: translate(40px, -80px) scale(0.9); }
+        }
+
+        @keyframes orbFloat3 {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-40%, -60%) scale(1.15); }
+        }
+
+        /* ===== FORGOT PASSWORD MODAL ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-lg);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+            transform: translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .modal-overlay.show .modal-card {
+            transform: translateY(0);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1.5rem;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 2rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover { color: var(--accent-red); }
+
+        .role-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .role-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-md);
+            padding: 1.5rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .role-card:hover {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: rgba(139, 92, 246, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .role-card.selected {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: #8b5cf6;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+        }
+
+        .role-card i {
+            font-size: 2rem;
+            color: var(--accent);
+            margin-bottom: 0.8rem;
+        }
+
+        .role-card span {
+            display: block;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .modal-step-2 {
+            display: none;
+            margin-top: 1.5rem;
+            animation: fadeUp 0.3s ease forwards;
+        }
+
+        /* ===== THEME TOGGLE ===== */
+        .theme-toggle-wrap {
+            position: fixed;
+            top: 28px;
+            right: 28px;
+            z-index: 1000;
+        }
+
+        .theme-btn {
+            width: 44px; height: 44px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .theme-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--accent);
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: scale(1.05);
+        }
+
+        [data-theme="light"] .theme-btn {
+            background: rgba(99, 102, 241, 0.06);
+            border-color: rgba(99, 102, 241, 0.12);
+        }
+
+        /* ===== MAIN LAYOUT ===== */
+        .login-wrapper {
+            position: relative;
+            z-index: 1;
+            width: 95%;
+            max-width: 1080px;
+            min-height: 620px;
+            display: grid;
+            grid-template-columns: 1.1fr 1fr;
+            border-radius: 32px;
+            overflow: hidden;
+            background: var(--bg-card);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border: 1px solid var(--card-border);
+            box-shadow:
+                0 40px 100px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.03),
+                inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            animation: wrapperReveal 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        [data-theme="light"] .login-wrapper {
+            box-shadow:
+                0 40px 100px rgba(99, 102, 241, 0.08),
+                0 0 0 1px rgba(99, 102, 241, 0.06),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+
+        @keyframes wrapperReveal {
+            from { opacity: 0; transform: translateY(40px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* ===== LEFT HERO ===== */
+        .hero {
+            background: linear-gradient(160deg, #4f46e5 0%, #6366f1 25%, #7c3aed 50%, #8b5cf6 75%, #a855f7 100%);
+            padding: 3.5rem 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+        }
+
+        .geo-shape {
+            position: absolute;
+            opacity: 0.12;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+        }
+
+        .geo-1 {
+            width: 120px; height: 120px;
+            border: 2px solid white;
+            border-radius: 24px;
+            top: 15%; right: 10%;
+            transform: rotate(45deg);
+            animation: geoFloat1 12s infinite;
+        }
+
+        .geo-2 {
+            width: 80px; height: 80px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 50%;
+            bottom: 25%; right: 25%;
+            animation: geoFloat2 15s infinite;
+        }
+
+        .geo-3 {
+            width: 60px; height: 60px;
+            border: 2px solid rgba(255,255,255,0.15);
+            top: 55%; left: 8%;
+            transform: rotate(30deg);
+            animation: geoFloat3 10s infinite;
+        }
+
+        .geo-4 {
+            width: 40px; height: 40px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 12px;
+            top: 10%; left: 30%;
+            transform: rotate(15deg);
+            animation: geoFloat2 18s infinite reverse;
+        }
+
+        .geo-5 {
+            width: 100px; height: 100px;
+            border: 1.5px solid rgba(255,255,255,0.08);
+            border-radius: 50%;
+            bottom: 10%; left: 15%;
+            animation: geoFloat1 20s infinite reverse;
+        }
+
+        @keyframes geoFloat1 {
+            0%, 100% { transform: rotate(45deg) translate(0, 0); }
+            25% { transform: rotate(50deg) translate(10px, -15px); }
+            50% { transform: rotate(42deg) translate(-8px, 12px); }
+            75% { transform: rotate(48deg) translate(15px, 5px); }
+        }
+
+        @keyframes geoFloat2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-15px, -20px) scale(1.1); }
+        }
+
+        @keyframes geoFloat3 {
+            0%, 100% { transform: rotate(30deg) translate(0, 0); }
+            50% { transform: rotate(35deg) translate(12px, -18px); }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            animation: badgePulse 3s ease-in-out infinite;
+        }
+
+        .hero-badge .dot {
+            width: 7px; height: 7px;
+            background: #4ade80;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #4ade80;
+        }
+
+        @keyframes badgePulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.05); }
+            50% { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
+        }
+
+        .hero-title {
+            font-size: 3rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 2rem;
+            color: white;
+            letter-spacing: -1px;
+        }
+
+        .highlight {
+            display: block;
+            color: #d8b4fe;
+        }
+
+        .hero-desc {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.65);
+            line-height: 1.7;
+            max-width: 360px;
+            margin-bottom: 2rem;
+        }
+
+        .welcome-address {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 4px solid #8b5cf6;
+            border-radius: 0 16px 16px 0;
+            backdrop-filter: blur(10px);
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            max-width: 420px;
+        }
+        
+        .welcome-address h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.5px;
+        }
+
+        [data-theme="light"] .welcome-address {
+            background: rgba(99, 102, 241, 0.05);
+            color: var(--text-secondary);
+            border-left-color: #6366f1;
+        }
+        
+        [data-theme="light"] .welcome-address h3 {
+            color: var(--text-primary);
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-item { text-align: center; }
+
+        .stat-num {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: white;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-top: 4px;
+        }
+
+        .hero-roles {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .role-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 14px;
+            color: white;
+            font-size: 0.82rem;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            transition: all 0.3s ease;
+            cursor: default;
+        }
+
+        .role-chip:hover {
+            background: rgba(255, 255, 255, 0.18);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .role-chip .chip-icon {
+            width: 32px; height: 32px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+        }
+
+        .role-chip.admin-chip .chip-icon { background: rgba(124, 143, 255, 0.2); color: #a5b4fc; }
+        .role-chip.staff-chip .chip-icon { background: rgba(52, 211, 153, 0.2); color: #6ee7b7; }
+        .role-chip.student-chip .chip-icon { background: rgba(251, 191, 36, 0.2); color: #fcd34d; }
+
+        /* ===== RIGHT FORM ===== */
+        .form-side {
+            padding: 3.5rem 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        .form-side::after {
+            content: '';
+            position: absolute;
+            top: -100px; right: -100px;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, var(--glow-1), transparent 70%);
+            pointer-events: none;
+        }
+
+        .form-header {
+            margin-bottom: 2.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .welcome-icon {
+            width: 56px; height: 56px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: white;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.3);
+            animation: iconFloat 4s ease-in-out infinite;
+        }
+
+        @keyframes iconFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .welcome-text {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 0.4rem;
+            letter-spacing: -0.03em;
+        }
+
+        .welcome-sub {
+            font-size: 0.92rem;
+            color: var(--text-muted);
+        }
+
+        .flash-msg {
+            padding: 14px 18px;
+            border-radius: 14px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: flashSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes flashSlide {
+            from { opacity: 0; transform: translateX(-15px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .flash-msg.error {
+            background: rgba(239, 68, 68, 0.08);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.12);
+        }
+
+        .flash-msg.success {
+            background: rgba(34, 197, 94, 0.08);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.12);
+        }
+
+        [data-theme="light"] .flash-msg.error { background: rgba(239, 68, 68, 0.06); color: #dc2626; }
+        [data-theme="light"] .flash-msg.success { background: rgba(34, 197, 94, 0.06); color: #16a34a; }
+
+        .role-indicator {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 18px;
+            border-radius: 14px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            margin-bottom: 1.3rem;
+            animation: flashSlide 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .role-indicator.show { display: flex; }
+
+        .role-indicator .ri-icon {
+            width: 28px; height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        .role-indicator.ri-admin { background: rgba(99, 102, 241, 0.08); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.12); }
+        .role-indicator.ri-admin .ri-icon { background: rgba(99, 102, 241, 0.15); }
+        .role-indicator.ri-staff { background: rgba(52, 211, 153, 0.08); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.12); }
+        .role-indicator.ri-staff .ri-icon { background: rgba(52, 211, 153, 0.15); }
+        .role-indicator.ri-student { background: rgba(251, 191, 36, 0.08); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.12); }
+        .role-indicator.ri-student .ri-icon { background: rgba(251, 191, 36, 0.15); }
+
+        .login-form { position: relative; z-index: 1; }
+
+        .field { margin-bottom: 1.4rem; }
+
+        .field-label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .field-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .field-icon {
+            position: absolute;
+            left: 18px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            transition: color 0.3s;
+            z-index: 1;
+        }
+
+        .field-input {
+            width: 100%;
+            padding: 16px 52px 16px 50px;
+            background: var(--input-bg);
+            border: 1.5px solid var(--input-border);
+            border-radius: 16px;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.35s ease;
+            outline: none;
+        }
+
+        .field-input:focus {
+            border-color: var(--input-border-focus);
+            background: var(--input-bg-focus);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.08), 0 0 30px rgba(99, 102, 241, 0.06);
+        }
+
+        .field-input-wrap:focus-within .field-icon { color: var(--accent); }
+
+        .field-input::placeholder { color: var(--text-muted); opacity: 0.5; font-weight: 400; }
+
+        .pw-toggle {
+            position: absolute;
+            right: 16px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.95rem;
+            padding: 6px;
+            transition: all 0.3s;
+            border-radius: 8px;
+            z-index: 1;
+        }
+
+        .pw-toggle:hover { color: var(--accent); background: rgba(99, 102, 241, 0.08); }
+
+        .forgot-link {
+            font-size: 0.78rem;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .forgot-link:hover {
+            color: var(--accent-2);
+            text-decoration: underline;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #4f46e5, #6366f1, #7c3aed);
+            background-size: 200% 200%;
+            animation: gradientShift 5s ease infinite;
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 0.5rem;
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 0.04em;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .btn-login::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(99, 102, 241, 0.4), 0 4px 15px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-login:hover::before { left: 100%; }
+        .btn-login:active { transform: translateY(-1px); }
+
+        .btn-login .spinner {
+            display: none;
+            width: 22px; height: 22px;
+            border: 2.5px solid rgba(255, 255, 255, 0.25);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        .btn-login.loading .spinner { display: block; }
+        .btn-login.loading .btn-text { display: none; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .auto-hint {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .auto-hint::before, .auto-hint::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--card-border);
+            max-width: 60px;
+        }
+
+        .auto-hint i { color: var(--accent); font-size: 0.85rem; }
+
+        .hero-logo-img {
+            width: 84px;
+            height: 84px;
+            border-radius: 22px;
+            margin-bottom: 24px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            animation: logoFloat 6s ease-in-out infinite;
+            object-fit: cover;
+            background: var(--bg-card);
+        }
+
+        [data-theme="light"] .hero-logo-img {
+            border-color: rgba(99, 102, 241, 0.15);
+            box-shadow: 0 12px 36px rgba(99, 102, 241, 0.15);
+        }
+
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 840px) {
+            .login-wrapper { grid-template-columns: 1fr; max-width: 480px; min-height: auto; }
+            .hero { padding: 2.5rem 2rem 2rem; }
+            .hero-title { font-size: 1.8rem; }
+            .hero-desc { display: none; }
+            .hero-stats { display: none; }
+            .form-side { padding: 2.5rem 2rem; }
+            .welcome-text { font-size: 1.6rem; }
+        }
+
+        @media (max-width: 480px) {
+            .login-wrapper { width: 100%; border-radius: 0; min-height: 100vh; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <canvas id="particleCanvas"></canvas>
+
+    <div class="theme-toggle-wrap">
+        <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">
+            <i class="fas fa-moon" id="themeIcon"></i>
+        </button>
+    </div>
+
+    <div class="login-wrapper">
+        <!-- LEFT HERO -->
+        <div class="hero">
+            <div class="geo-shape geo-1"></div>
+            <div class="geo-shape geo-2"></div>
+            <div class="geo-shape geo-3"></div>
+            <div class="geo-shape geo-4"></div>
+            <div class="geo-shape geo-5"></div>
+
+            <div class="hero-content">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" class="hero-logo-img" alt="Academic Prediction System Logo">
+                <h1 class="hero-title">
+                    Academic
+                    <span class="highlight">Prediction System</span>
+                </h1>
+                
+                <div class="welcome-address">
+                    <h3>Empowering Education with AI</h3>
+                    <p>Welcome to our predictive analytics platform. By leveraging machine learning, we help educators identify academic trends early, ensuring every student has the optimal path to success and distinction.</p>
+                </div>
+            </div>
+
+
+        </div>
+
+        <!-- RIGHT FORM -->
+        <div class="form-side">
+            <div class="form-header">
+                <div class="welcome-icon">
+                    <i class="fas fa-fingerprint"></i>
+                </div>
+                <h2 class="welcome-text">Welcome Back</h2>
+                <p class="welcome-sub">Sign in to continue to your dashboard</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-msg {{ category }}">
+                <i class="fas {{ 'fa-check-circle' if category == 'success' else 'fa-exclamation-triangle' }}"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+
+
+            <form method="POST" action="{{ url_for('auth.unified_login') }}" class="login-form" id="loginForm">
+                <div class="field">
+                    <label class="field-label">Username / Register Number</label>
+                    <div class="field-input-wrap">
+                        <i class="fas fa-user field-icon" id="fieldIconUser"></i>
+                        <input type="text" name="identifier" id="identifierInput" class="field-input"
+                            placeholder="e.g. admin or 2024CSE001" required autofocus autocomplete="username">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="field-label">Password</label>
+                    <div class="field-input-wrap">
+                        <i class="fas fa-lock field-icon"></i>
+                        <input type="password" name="password" id="passwordInput" class="field-input"
+                            placeholder="Enter your password" required autocomplete="current-password">
+                        <button type="button" class="pw-toggle" onclick="togglePassword()" title="Toggle visibility">
+                            <i class="fas fa-eye" id="eyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-login" id="loginBtn" style="margin-bottom: 1.2rem;">
+                    <span class="btn-text"><i class="fas fa-arrow-right"></i>&nbsp; Sign In</span>
+                    <div class="spinner"></div>
+                </button>
+                
+                <div style="text-align: center;">
+                    <a href="javascript:void(0);" onclick="openForgotModal();" class="forgot-link">Forgot Password?</a>
+                </div>
+            </form>
+
+
+        </div>
+    </div>
+
+    <!-- FORGOT PASSWORD MODAL -->
+    <div class="modal-overlay" id="forgotModal">
+        <div class="modal-card">
+            <button class="modal-close" type="button" onclick="closeForgotModal()">&times;</button>
+            <h2 style="margin-bottom: 0.5rem; color: var(--text-primary);"><i class="fas fa-unlock-alt" style="color: var(--accent);"></i> Reset Password</h2>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">Select your role to securely request a password reset.</p>
+            
+            <form method="POST" action="{{ url_for('auth.forgot_password') }}" id="forgotForm">
+                <input type="hidden" name="role" id="forgotRoleInput" value="">
+                
+                <!-- STEP 1: Select Role -->
+                <div class="role-cards" id="roleSelectionGroup">
+                    <div class="role-card" onclick="selectForgotRole('student')">
+                        <i class="fas fa-user-graduate"></i>
+                        <span>Student</span>
+                    </div>
+                    <div class="role-card" onclick="selectForgotRole('staff')">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        <span>Staff</span>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Enter Identifier -->
+                <div class="modal-step-2" id="forgotStep2">
+                    <div class="field">
+                        <label class="field-label" id="forgotIdentifierLabel">Register Number</label>
+                        <div class="field-input-wrap">
+                            <i class="fas fa-id-card field-icon" id="forgotIcon"></i>
+                            <input type="text" name="identifier" id="forgotIdentifier" class="field-input" placeholder="e.g. 2024CSE001">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-login" style="margin-top: 1rem;" id="forgotSubmitBtn">
+                        <span class="btn-text" id="forgotBtnText"><i class="fas fa-paper-plane"></i>&nbsp; Send Request</span>
+                        <div class="spinner"></div>
+                    </button>
+                    <div style="text-align: center; margin-top: 1.2rem;">
+                        <a href="javascript:void(0);" onclick="resetForgotSteps()" class="forgot-link" style="font-size: 0.85rem;"><i class="fas fa-arrow-left"></i> Back to Role Selection</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        /* ===== INTERACTIVE NEURAL PARTICLE SYSTEM ===== */
+        (function () {
+            var canvas = document.getElementById('particleCanvas');
+            var ctx = canvas.getContext('2d');
+            var particles = [];
+            
+            // Calculate dense particle count dynamically based on screen size 
+            // (e.g. around 250-350 particles on a standard monitor)
+            var count = Math.min(400, Math.floor((window.innerWidth || 1920) * (window.innerHeight || 1080) / 4500)); 
+            
+            var mouse = { x: null, y: null, radius: 150 };
+
+            window.addEventListener('mousemove', function(event) {
+                mouse.x = event.x;
+                mouse.y = event.y;
+            });
+
+            window.addEventListener('mouseout', function() {
+                mouse.x = null;
+                mouse.y = null;
+            });
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            function Particle() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.4;
+                this.vy = (Math.random() - 0.5) * 0.4;
+                this.radius = Math.random() * 2 + 1;
+                this.alpha = Math.random() * 0.5 + 0.1;
+                this.color = (Math.random() > 0.5) ? '99, 102, 241' : '168, 85, 247'; // Mix blue and purple
+            }
+
+            Particle.prototype.update = function () {
+                // Interactive mouse repulsion/attraction
+                if (mouse.x && mouse.y) {
+                    var dx = mouse.x - this.x;
+                    var dy = mouse.y - this.y;
+                    var distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < mouse.radius) {
+                        var forceDirectionX = dx / distance;
+                        var forceDirectionY = dy / distance;
+                        var force = (mouse.radius - distance) / mouse.radius;
+                        var directionX = forceDirectionX * force * 0.5;
+                        var directionY = forceDirectionY * force * 0.5;
+                        this.vx -= directionX; // Push away
+                        this.vy -= directionY; // Push away
+
+                    }
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Friction
+                this.vx *= 0.99;
+                this.vy *= 0.99;
+
+                // Base wandering speed maintenance
+                if(Math.abs(this.vx) < 0.1) this.vx += (Math.random() - 0.5) * 0.1;
+                if(Math.abs(this.vy) < 0.1) this.vy += (Math.random() - 0.5) * 0.1;
+
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+            };
+
+            Particle.prototype.draw = function () {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(' + this.color + ', ' + this.alpha + ')';
+                ctx.fill();
+            };
+
+            for (var i = 0; i < count; i++) particles.push(new Particle());
+
+            function connectParticles() {
+                for (var i = 0; i < particles.length; i++) {
+                    for (var j = i + 1; j < particles.length; j++) {
+                        var dx = particles[i].x - particles[j].x;
+                        var dy = particles[i].y - particles[j].y;
+                        var dist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        // Reduced connection distance (90 instead of 130) to prevent 
+                        // massive frame drops with 300+ particles
+                        if (dist < 90) {
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            var opacity = (1 - dist / 90) * 0.15;
+                            ctx.strokeStyle = 'rgba(139, 92, 246, ' + opacity + ')';
+                            ctx.lineWidth = 0.5;
+                            ctx.stroke();
+                        }
+                    }
+                    // Connect to mouse
+                    if (mouse.x && mouse.y) {
+                        var dx = particles[i].x - mouse.x;
+                        var dy = particles[i].y - mouse.y;
+                        var dist = Math.sqrt(dx*dx + dy*dy);
+                        if (dist < 150) {
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(mouse.x, mouse.y);
+                            var opacity = (1 - dist / 150) * 0.2;
+                            ctx.strokeStyle = 'rgba(99, 102, 241, ' + opacity + ')';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(function (p) { p.update(); p.draw(); });
+                connectParticles();
+                requestAnimationFrame(animate);
+            }
+            animate();
+        })();
+
+        /* ===== Theme ===== */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var next = (html.getAttribute('data-theme') || 'dark') === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon(next);
+        }
+
+        function updateThemeIcon(t) {
+            var ic = document.getElementById('themeIcon');
+            if (ic) ic.className = t === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        /* ===== Password Toggle ===== */
+        function togglePassword() {
+            var pw = document.getElementById('passwordInput');
+            var eye = document.getElementById('eyeIcon');
+            pw.type = pw.type === 'password' ? 'text' : 'password';
+            eye.className = pw.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+        }
+
+        /* ===== Smart Role Hint ===== */
+        var idInput = document.getElementById('identifierInput');
+        var ri = document.getElementById('roleIndicator');
+        var riIcon = document.getElementById('riIcon');
+        var riText = document.getElementById('riText');
+        var fIcon = document.getElementById('fieldIconUser');
+
+        idInput.addEventListener('input', function () {
+            var v = this.value.trim();
+            ri.className = 'role-indicator';
+
+            if (/^\d{4}[A-Za-z]/.test(v) || (v.length > 4 && /\d/.test(v) && /[A-Za-z]/.test(v))) {
+                ri.classList.add('show', 'ri-student');
+                riIcon.innerHTML = '<i class="fas fa-user-graduate"></i>';
+                riText.textContent = 'Student Login Detected';
+                fIcon.className = 'fas fa-id-card field-icon';
+            } else if (v.toLowerCase() === 'admin') {
+                ri.classList.add('show', 'ri-admin');
+                riIcon.innerHTML = '<i class="fas fa-user-shield"></i>';
+                riText.textContent = 'Admin Login Detected';
+                fIcon.className = 'fas fa-user-shield field-icon';
+            } else if (v.length > 0) {
+                ri.classList.add('show', 'ri-staff');
+                riIcon.innerHTML = '<i class="fas fa-chalkboard-teacher"></i>';
+                riText.textContent = 'Staff Login Detected';
+                fIcon.className = 'fas fa-chalkboard-teacher field-icon';
+            } else {
+                fIcon.className = 'fas fa-user field-icon';
+            }
+        });
+
+        /* ===== Loading State ===== */
+        document.getElementById('loginForm').addEventListener('submit', function () {
+            document.getElementById('loginBtn').classList.add('loading');
+        });
+
+        /* ===== Init ===== */
+        document.addEventListener('DOMContentLoaded', function () {
+            updateThemeIcon(localStorage.getItem('theme') || 'dark');
+        });
+
+        /* ===== FORGOT PASSWORD MODAL JS ===== */
+        function openForgotModal() {
+            document.getElementById('forgotModal').classList.add('show');
+            resetForgotSteps();
+        }
+
+        function closeForgotModal() {
+            document.getElementById('forgotModal').classList.remove('show');
+        }
+
+        function selectForgotRole(role) {
+            document.getElementById('forgotRoleInput').value = role;
+            
+            const cards = document.querySelectorAll('.role-card');
+            cards.forEach(c => c.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+
+            setTimeout(() => {
+                document.getElementById('roleSelectionGroup').style.display = 'none';
+                document.getElementById('forgotStep2').style.display = 'block';
+                
+                const label = document.getElementById('forgotIdentifierLabel');
+                const pinput = document.getElementById('forgotIdentifier');
+                const icon = document.getElementById('forgotIcon');
+                const btnText = document.getElementById('forgotBtnText');
+
+                if (role === 'student') {
+                    label.textContent = 'Register Number';
+                    pinput.placeholder = 'e.g. 2024CSE001';
+                    icon.className = 'fas fa-id-card field-icon';
+                    btnText.innerHTML = '<i class="fas fa-paper-plane"></i>&nbsp; Request via Staff';
+                } else {
+                    label.textContent = 'Staff Username';
+                    pinput.placeholder = 'e.g. admin or john_doe';
+                    icon.className = 'fas fa-user-tie field-icon';
+                    btnText.innerHTML = '<i class="fas fa-paper-plane"></i>&nbsp; Request via Admin';
+                }
+                document.getElementById('forgotIdentifier').required = true;
+                document.getElementById('forgotIdentifier').focus();
+            }, 300);
+        }
+
+        function resetForgotSteps() {
+            document.getElementById('forgotRoleInput').value = '';
+            document.getElementById('forgotIdentifier').value = '';
+            document.getElementById('forgotIdentifier').required = false;
+            document.getElementById('roleSelectionGroup').style.display = 'grid';
+            document.getElementById('forgotStep2').style.display = 'none';
+            const cards = document.querySelectorAll('.role-card');
+            cards.forEach(c => c.classList.remove('selected'));
+        }
+
+        document.getElementById('forgotModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeForgotModal();
+            }
+        });
+        
+        document.getElementById('forgotForm').addEventListener('submit', function() {
+            document.getElementById('forgotSubmitBtn').classList.add('loading');
+        });
+    </script>
+</body>
+
+</html>

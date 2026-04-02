@@ -1,0 +1,472 @@
+{% extends "base.html" %}
+{% block title %}API Documentation{% endblock %}
+
+{% block extra_css %}
+<style>
+    .api-header {
+        margin-bottom: 2rem;
+    }
+
+    .api-header h1 {
+        font-size: 2rem;
+        font-weight: 900;
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .api-header p {
+        color: var(--text-muted);
+        margin-top: 6px;
+    }
+
+    .api-section {
+        margin-bottom: 2rem;
+    }
+
+    .api-endpoint {
+        background: var(--bg-glass);
+        backdrop-filter: blur(16px);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        margin-bottom: 1.2rem;
+        transition: all 0.3s;
+    }
+
+    .api-endpoint:hover {
+        border-color: var(--border-glow);
+        box-shadow: var(--shadow-glow);
+    }
+
+    .api-method {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-right: 10px;
+    }
+
+    .method-get {
+        background: rgba(52, 211, 153, 0.15);
+        color: var(--accent-green);
+        border: 1px solid rgba(52, 211, 153, 0.3);
+    }
+
+    .method-post {
+        background: rgba(124, 143, 255, 0.15);
+        color: var(--accent-blue);
+        border: 1px solid rgba(124, 143, 255, 0.3);
+    }
+
+    .api-url {
+        font-family: 'Courier New', monospace;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .api-desc {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-top: 8px;
+        margin-bottom: 12px;
+    }
+
+    .api-params {
+        margin-top: 12px;
+    }
+
+    .api-params h4 {
+        font-size: 0.8rem;
+        color: var(--accent-blue);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+
+    .param-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .param-table th {
+        background: rgba(124, 143, 255, 0.08);
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        text-align: left;
+    }
+
+    .param-table td {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        border-bottom: 1px solid rgba(124, 143, 255, 0.06);
+    }
+
+    .param-name {
+        font-family: 'Courier New', monospace;
+        color: var(--accent-cyan);
+        font-weight: 600;
+    }
+
+    .param-type {
+        color: var(--accent-purple);
+        font-size: 0.8rem;
+    }
+
+    .response-block {
+        margin-top: 12px;
+    }
+
+    .response-block h4 {
+        font-size: 0.8rem;
+        color: var(--accent-green);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+
+    .code-block {
+        background: rgba(10, 10, 26, 0.8);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-xs);
+        padding: 1rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+        overflow-x: auto;
+        white-space: pre;
+        line-height: 1.6;
+    }
+
+    .try-btn {
+        margin-top: 10px;
+        padding: 6px 14px;
+        font-size: 0.8rem;
+    }
+
+    .try-result {
+        margin-top: 8px;
+        display: none;
+    }
+
+    .try-result.show {
+        display: block;
+    }
+
+    .api-version-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        background: var(--gradient-primary);
+        color: white;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        margin-left: 8px;
+    }
+
+    .auth-notice {
+        background: rgba(251, 191, 36, 0.1);
+        border: 1px solid rgba(251, 191, 36, 0.3);
+        border-radius: var(--radius-sm);
+        padding: 1rem 1.2rem;
+        color: var(--accent-orange);
+        font-size: 0.9rem;
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-title {
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-title i {
+        color: var(--accent-blue);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="api-header">
+    <h1><i class="fas fa-book"></i> API Documentation <span class="api-version-badge">v1</span></h1>
+    <p>RESTful API for the Academic Performance Prediction System</p>
+</div>
+
+<div class="auth-notice">
+    <i class="fas fa-lock" style="font-size: 1.2rem;"></i>
+    <div>
+        <strong>Authentication Required</strong> — All API endpoints require an active session. Login through the web interface first.
+    </div>
+</div>
+
+<!-- Base URL -->
+<div class="card" style="margin-bottom: 2rem;">
+    <div class="card-title"><i class="fas fa-server"></i> Base URL</div>
+    <div class="code-block">http://127.0.0.1:5000/api/v1</div>
+</div>
+
+<!-- Students Endpoints -->
+<div class="api-section">
+    <div class="section-title"><i class="fas fa-users"></i> Students</div>
+
+    <!-- GET /students -->
+    <div class="api-endpoint">
+        <div>
+            <span class="api-method method-get">GET</span>
+            <span class="api-url">/api/v1/students</span>
+        </div>
+        <div class="api-desc">List all students with optional search, filter, and pagination.</div>
+
+        <div class="api-params">
+            <h4>Query Parameters</h4>
+            <table class="param-table">
+                <thead>
+                    <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td class="param-name">search</td><td class="param-type">string</td><td>Search by name, reg_no, or department</td></tr>
+                    <tr><td class="param-name">dept</td><td class="param-type">string</td><td>Filter by department (CSE, ECE, etc.)</td></tr>
+                    <tr><td class="param-name">risk</td><td class="param-type">string</td><td>Filter by risk level (Low, Medium, High)</td></tr>
+                    <tr><td class="param-name">status</td><td class="param-type">string</td><td>Filter by status (Pass, Fail, Pending)</td></tr>
+                    <tr><td class="param-name">page</td><td class="param-type">integer</td><td>Page number (default: 1)</td></tr>
+                    <tr><td class="param-name">per_page</td><td class="param-type">integer</td><td>Results per page (default: 10, max: 100)</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="response-block">
+            <h4>Response Example</h4>
+            <div class="code-block">{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "reg_no": "2024CSE001",
+      "name": "John Doe",
+      "dept": "CSE",
+      "year": 2,
+      "academic": {
+        "internal_1": 75.0,
+        "internal_2": 80.0,
+        "internal_3": 70.0,
+        "internal_avg": 75.0,
+        "assignment": 25.0,
+        "attendance": 85.0,
+        "prediction_result": "Pass",
+        "risk_level": "Low"
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 10,
+    "total": 25,
+    "pages": 3,
+    "has_next": true,
+    "has_prev": false
+  }
+}</div>
+        </div>
+
+        <button class="btn btn-primary btn-sm try-btn" onclick="tryEndpoint('/api/v1/students', 'result1')">
+            <i class="fas fa-play"></i> Try It
+        </button>
+        <div class="try-result" id="result1">
+            <div class="code-block" id="result1_data">Loading...</div>
+        </div>
+    </div>
+
+    <!-- GET /students/:reg_no -->
+    <div class="api-endpoint">
+        <div>
+            <span class="api-method method-get">GET</span>
+            <span class="api-url">/api/v1/students/{reg_no}</span>
+        </div>
+        <div class="api-desc">Get detailed information for a specific student including academic data and prediction history.</div>
+
+        <div class="api-params">
+            <h4>Path Parameters</h4>
+            <table class="param-table">
+                <thead>
+                    <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td class="param-name">reg_no</td><td class="param-type">string</td><td>Student register number</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="response-block">
+            <h4>Response Example</h4>
+            <div class="code-block">{
+  "success": true,
+  "data": {
+    "reg_no": "2024CSE001",
+    "name": "John Doe",
+    "dept": "CSE",
+    "year": 2,
+    "academic": { ... },
+    "prediction_history": [
+      {
+        "prediction_result": "Pass",
+        "risk_level": "Low",
+        "grade": "B",
+        "created_at": "2026-03-25 09:00"
+      }
+    ]
+  }
+}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Endpoint -->
+<div class="api-section">
+    <div class="section-title"><i class="fas fa-chart-bar"></i> Statistics</div>
+
+    <div class="api-endpoint">
+        <div>
+            <span class="api-method method-get">GET</span>
+            <span class="api-url">/api/v1/stats</span>
+        </div>
+        <div class="api-desc">Get dashboard-level statistics including totals, risk distribution, and department-wise breakdown.</div>
+
+        <div class="response-block">
+            <h4>Response Example</h4>
+            <div class="code-block">{
+  "success": true,
+  "data": {
+    "total_students": 45,
+    "total_staff": 5,
+    "total_admins": 2,
+    "total_pass": 30,
+    "total_fail": 10,
+    "total_pending": 5,
+    "risk": {
+      "high": 8,
+      "medium": 12,
+      "low": 20
+    },
+    "department_stats": {
+      "CSE": { "total": 15, "pass": 10, "fail": 3, "pending": 2 },
+      "ECE": { "total": 10, "pass": 7, "fail": 2, "pending": 1 }
+    }
+  }
+}</div>
+        </div>
+
+        <button class="btn btn-primary btn-sm try-btn" onclick="tryEndpoint('/api/v1/stats', 'result2')">
+            <i class="fas fa-play"></i> Try It
+        </button>
+        <div class="try-result" id="result2">
+            <div class="code-block" id="result2_data">Loading...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Predict Endpoint -->
+<div class="api-section">
+    <div class="section-title"><i class="fas fa-brain"></i> Prediction</div>
+
+    <div class="api-endpoint">
+        <div>
+            <span class="api-method method-post">POST</span>
+            <span class="api-url">/api/v1/predict/{reg_no}</span>
+        </div>
+        <div class="api-desc">Run prediction for a student. Requires academic marks to be entered first. Saves result to prediction history.</div>
+
+        <div class="api-params">
+            <h4>Path Parameters</h4>
+            <table class="param-table">
+                <thead>
+                    <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td class="param-name">reg_no</td><td class="param-type">string</td><td>Student register number</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="response-block">
+            <h4>Response Example</h4>
+            <div class="code-block">{
+  "success": true,
+  "data": {
+    "student_name": "John Doe",
+    "reg_no": "2024CSE001",
+    "prediction_result": "Pass",
+    "risk_level": "Low",
+    "grade": "B",
+    "internal_avg": 75.0,
+    "attendance": 85.0,
+    "suggestions": [
+      "Try to maintain attendance above 85% for better performance."
+    ]
+  }
+}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Responses -->
+<div class="api-section">
+    <div class="section-title"><i class="fas fa-exclamation-triangle"></i> Error Responses</div>
+
+    <div class="card">
+        <table class="param-table">
+            <thead>
+                <tr><th>Status Code</th><th>Description</th><th>Example</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span style="color: var(--accent-orange); font-weight: 700;">400</span></td>
+                    <td>Bad Request</td>
+                    <td class="code-block" style="padding: 6px 10px; font-size: 0.8rem;">{"success": false, "error": "No academic records found."}</td>
+                </tr>
+                <tr>
+                    <td><span style="color: var(--accent-red); font-weight: 700;">401</span></td>
+                    <td>Unauthorized</td>
+                    <td>Redirected to login page</td>
+                </tr>
+                <tr>
+                    <td><span style="color: var(--accent-red); font-weight: 700;">404</span></td>
+                    <td>Not Found</td>
+                    <td class="code-block" style="padding: 6px 10px; font-size: 0.8rem;">{"success": false, "error": "Student not found"}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function tryEndpoint(url, resultId) {
+        const resultDiv = document.getElementById(resultId);
+        const dataDiv = document.getElementById(resultId + '_data');
+        resultDiv.classList.add('show');
+        dataDiv.textContent = 'Loading...';
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                dataDiv.textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(error => {
+                dataDiv.textContent = 'Error: ' + error.message + '\n\nMake sure you are logged in first.';
+            });
+    }
+</script>
+{% endblock %}

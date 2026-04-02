@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title th:text="'Enter Marks — ' + ${student.name}">Enter Marks</title>
+    <th:block th:insert="~{base :: head_css}" />
+</head>
+
+<body>
+    <th:block th:insert="~{base :: orbs}" />
+    <th:block th:insert="~{base :: navbar}" />
+    <th:block th:insert="~{base :: flash_messages}" />
+
+    <div class="main-content fade-in">
+        <div class="page-header">
+            <h1><i class="fas fa-edit"></i> Enter Marks</h1>
+            <p>Student: <strong th:text="${student.name}">Name</strong> (<span th:text="${student.regNo}">REG</span>) —
+                <span th:text="${student.dept}">CSE</span>, Year <span th:text="${student.year}">1</span></p>
+        </div>
+
+        <div class="card" style="max-width: 700px;">
+            <div class="card-title"><i class="fas fa-clipboard-list"></i> Academic Details</div>
+            <form method="POST" th:action="@{/dashboard/staff/enter-marks/{r}(r=${student.regNo})}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Internal Test 1 (0–100)</label>
+                        <input type="number" name="internal_1" class="form-control"
+                            th:value="${academic != null ? academic.internal1 : ''}" placeholder="0" min="0" max="100"
+                            step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Internal Test 2 (0–100)</label>
+                        <input type="number" name="internal_2" class="form-control"
+                            th:value="${academic != null ? academic.internal2 : ''}" placeholder="0" min="0" max="100"
+                            step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Internal Test 3 (0–100)</label>
+                        <input type="number" name="internal_3" class="form-control"
+                            th:value="${academic != null ? academic.internal3 : ''}" placeholder="0" min="0" max="100"
+                            step="0.1" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Assignment (0–30)</label>
+                        <input type="number" name="assignment" class="form-control"
+                            th:value="${academic != null ? academic.assignment : ''}" placeholder="0" min="0" max="30"
+                            step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Previous Sem GPA (0–10)</label>
+                        <input type="number" name="prev_sem_gpa" class="form-control"
+                            th:value="${academic != null ? academic.prevSemGpa : ''}" placeholder="0" min="0" max="10"
+                            step="0.01" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Study Hours/Day</label>
+                        <input type="number" name="study_hours_per_day" class="form-control"
+                            th:value="${academic != null ? academic.studyHoursPerDay : ''}" placeholder="0" min="0"
+                            max="24" step="0.5" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Attendance % (0–100)</label>
+                        <input type="number" name="attendance" class="form-control"
+                            th:value="${academic != null ? academic.attendance : ''}" placeholder="0" min="0" max="100"
+                            step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Extra Activity</label>
+                        <select name="extra_activity" class="form-control" id="extra_activity_select">
+                            <option value="no" th:selected="${academic == null or !academic.extraActivity}">No</option>
+                            <option value="yes" th:selected="${academic != null and academic.extraActivity}">Yes
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" id="extra_type_group" style="display: none;"
+                    th:data-active="${academic != null and academic.extraActivity ? 'yes' : 'no'}">
+                    <label class="form-label">Extra Activity Type</label>
+                    <input type="text" name="extra_activity_type" class="form-control"
+                        th:value="${academic != null ? academic.extraActivityType : ''}"
+                        placeholder="e.g., Sports, Music, Coding Club">
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Save Marks</button>
+                    <a th:href="${userRole == 'admin' ? '/dashboard/admin' : '/dashboard/staff'}"
+                        class="btn btn-primary"><i class="fas fa-arrow-left"></i> Back</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <th:block th:insert="~{base :: base_js}" />
+    <script>
+        var g = document.getElementById('extra_type_group');
+        var s = document.getElementById('extra_activity_select');
+        if (g.dataset.active === 'yes') g.style.display = 'block';
+        s.addEventListener('change', function () { g.style.display = this.value === 'yes' ? 'block' : 'none'; });
+    </script>
+</body>
+
+</html>
