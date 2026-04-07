@@ -1,8 +1,5 @@
-[phases.setup]
-nixPkgs = ["python312"]
-
 [phases.install]
 cmds = ["pip install -r backend/python/requirements.txt"]
 
 [start]
-cmd = "gunicorn --chdir backend/python app:app"
+cmd = "gunicorn --chdir backend/python app:app --bind 0.0.0.0:$PORT"

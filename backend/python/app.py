@@ -9,9 +9,15 @@ def create_app():
     """Application factory."""
     # Point Flask to the new frontend directory
     base_dir = os.path.abspath(os.path.dirname(__file__))
+    # Support both local and Railway deployment paths
     frontend_dir = os.path.abspath(os.path.join(base_dir, '../../frontend/python_ui'))
-    
-    app = Flask(__name__, 
+    if not os.path.exists(frontend_dir):
+        frontend_dir = os.path.abspath(os.path.join(base_dir, '../../../frontend/python_ui'))
+    if not os.path.exists(frontend_dir):
+        # Railway: project root is /app, backend is /app/backend/python
+        frontend_dir = os.path.abspath(os.path.join(base_dir, '..', '..', 'frontend', 'python_ui'))
+
+    app = Flask(__name__,
                 template_folder=os.path.join(frontend_dir, 'templates'),
                 static_folder=os.path.join(frontend_dir, 'static'))
     app.config.from_object(Config)
