@@ -68,8 +68,9 @@ def _create_default_admin():
         print('  [INFO] Default admin created: admin / admin123')
 
 
+app = create_app()
+
 if __name__ == '__main__':
-    app = create_app()
     print('=' * 60)
     print('  Academic Performance Prediction System')
     print('  Running at: http://127.0.0.1:5000')

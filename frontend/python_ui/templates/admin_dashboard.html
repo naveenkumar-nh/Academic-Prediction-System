@@ -1,10 +1,72 @@
 {% extends "base.html" %}
-{% block title %}Admin Dashboard{% endblock %}
+{% block title %}Admin Dashboard
+<!-- CSV Upload Modal -->
+<style>
+.csv-modal-overlay {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    align-items: center; justify-content: center;
+}
+.csv-modal-content {
+    background: var(--bg-card-solid);
+    padding: 2rem;
+    border-radius: var(--radius);
+    width: 90%; max-width: 500px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+}
+</style>
+<div id="adminCsvModal" class="csv-modal-overlay">
+    <div class="csv-modal-content">
+        <h3 style="margin-bottom: 1rem; color: var(--text-primary);"><i class="fas fa-file-csv"></i> Upload Students CSV</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+            Upload your student details and academic marks concurrently. <br>
+            <a href="{{ url_for('dashboard.download_csv_template') }}" style="color: var(--accent-blue); text-decoration: none; font-weight: bold;"><i class="fas fa-download"></i> Download Template</a>
+        </p>
+        <form method="POST" action="{{ url_for('dashboard.upload_students_csv') }}" enctype="multipart/form-data">
+            
+            <div class="form-group">
+                <label class="form-label">Assign to Staff</label>
+                <select name="staff_id" class="form-control" required>
+                    <option value="">Select Staff Member</option>
+                    {% for staff in staff_list %}
+                    <option value="{{ staff.id }}">{{ staff.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+    
+            <div class="form-group">
+                <label class="form-label">CSV File</label>
+                <input type="file" name="file" accept=".csv" class="form-control" style="padding: 10px;" required>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+                <button type="button" class="btn" style="background: rgba(100,100,100,0.2); color: var(--text-primary); border: none; flex: 1;" onclick="document.getElementById('adminCsvModal').style.display='none'">Cancel</button>
+                <button type="submit" class="btn" style="background: linear-gradient(135deg, #10b981, #3b82f6); color: white; border: none; flex: 1;">Upload</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1><i class="fas fa-user-shield"></i> Admin Dashboard</h1>
-    <p>Manage staff accounts and students for your institution</p>
+</style>
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1.5rem;">
+    <div>
+        <h1><i class="fas fa-user-shield"></i> Admin Dashboard</h1>
+        <p>Manage staff accounts and students for your institution</p>
+    </div>
+    <a href="{{ url_for('dashboard.messages_page') }}" class="btn" style="background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); color: #fff; border: none; padding: 10px 22px; display: flex; align-items: center; gap: 10px; position: relative; text-decoration: none; font-weight: 700; box-shadow: 0 4px 15px rgba(131,58,180,0.3); transition: all 0.3s ease;">
+        <i class="fas fa-comments"></i> Messages
+        {% if unread_msg_count is defined and unread_msg_count > 0 %}
+        <span style="position: absolute; top: -8px; right: -8px; background: #ff3040; color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; border: 2px solid var(--bg-primary); box-shadow: 0 0 12px rgba(255,48,64,0.4); animation: pulse-badge 2s ease-in-out infinite;">
+            {{ unread_msg_count }}
+        </span>
+        {% endif %}
+    </a>
 </div>
 
 <!-- Stats Row 1: Core Counts -->
@@ -104,6 +166,12 @@
         <div class="card-title">
             <i class="fas fa-user-shield"></i> Add New Admin
         </div>
+        {% if total_admins >= 4 %}
+        <div style="padding: 1rem; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius-sm); color: var(--accent-red); margin-bottom: 1rem; text-align: center; font-size: 0.9rem;">
+            <i class="fas fa-exclamation-circle" style="margin-bottom: 0.5rem; font-size: 1.5rem;"></i><br>
+            Maximum limit of 4 administrators has been reached. You must delete an existing admin before adding a new one.
+        </div>
+        {% else %}
         <form method="POST" action="{{ url_for('dashboard.add_admin') }}">
             <div class="form-group">
                 <label class="form-label">Username</label>
@@ -119,6 +187,7 @@
                 <i class="fas fa-plus"></i> Add Admin
             </button>
         </form>
+        {% endif %}
     </div>
 
     <!-- Admin List -->
@@ -254,8 +323,11 @@
 <div class="grid-2" style="margin-bottom: 2rem;">
     <!-- Add Student Form -->
     <div class="card">
-        <div class="card-title">
-            <i class="fas fa-user-graduate"></i> Add New Student
+        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span><i class="fas fa-user-graduate"></i> Add New Student</span>
+            <button type="button" class="btn btn-sm" onclick="document.getElementById('adminCsvModal').style.display='flex'" style="background: linear-gradient(135deg, #10b981, #3b82f6); color: white; border: none; font-size: 0.8rem; padding: 8px 12px; border-radius: 6px;">
+                <i class="fas fa-file-csv"></i> Bulk Upload CSV
+            </button>
         </div>
         <form method="POST" action="{{ url_for('dashboard.add_student') }}">
             <div class="form-row">
@@ -473,76 +545,6 @@
     {% endif %}
 </div>
 
-<!-- Admin Messages Inbox -->
-<div class="card" id="admin-messages" style="margin-top: 2rem;">
-    <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
-        <span><i class="fas fa-envelope"></i> Staff Messages
-            {% if unread_msg_count > 0 %}
-            <span style="display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 12px; background: var(--accent-red); color: white; font-size: 0.7rem; font-weight: 700; margin-left: 8px;">{{ unread_msg_count }}</span>
-            {% endif %}
-        </span>
-    </div>
-
-    {% if messages %}
-    <div style="display: flex; flex-direction: column; gap: 1rem;">
-        {% for msg in messages %}
-        <div style="padding: 1rem 1.2rem; border-radius: var(--radius-sm); background: var(--bg-primary); border: 1px solid var(--border-color); {% if not msg.is_read %}border-left: 3px solid var(--accent-blue);{% endif %}">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
-                <div>
-                    <span style="display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.68rem; font-weight: 600; margin-right: 6px; background: rgba(102,126,234,0.12); color: var(--accent-blue);">
-                        <i class="fas fa-chalkboard-teacher"></i>
-                        {% for staff in staff_list %}
-                            {% if staff.id == msg.sender_id %}
-                                Staff: {{ staff.username }}
-                            {% endif %}
-                        {% endfor %}
-                    </span>
-                    <span style="font-weight: 700; font-size: 0.92rem; color: var(--text-primary);">{{ msg.subject }}</span>
-                    {% if not msg.is_read %}
-                    <span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 700; background: var(--accent-blue); color: white; margin-left: 6px;">NEW</span>
-                    <form method="POST" action="{{ url_for('dashboard.mark_admin_message_read', msg_id=msg.id) }}" style="display: inline; margin-left: 8px;">
-                        <button type="submit" style="background: rgba(124,143,255,0.1); color: var(--accent-blue); border: 1px solid rgba(124,143,255,0.2); border-radius: 4px; padding: 2px 8px; font-size: 0.65rem; font-weight: 700; cursor: pointer;">
-                            <i class="fas fa-check"></i> Mark Read
-                        </button>
-                    </form>
-                    {% endif %}
-                </div>
-                <span style="font-size: 0.72rem; color: var(--text-muted);">{{ msg.created_at.strftime('%d %b %Y, %I:%M %p') }}</span>
-            </div>
-            <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">{{ msg.content }}</div>
-
-            <!-- Existing Replies -->
-            {% for reply in msg.replies %}
-            <div style="margin-top: 10px; margin-left: 16px; padding: 10px 14px; border-left: 2px solid var(--accent-purple); border-radius: 0 8px 8px 0; background: rgba(124,58,237,0.04);">
-                <span style="display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.68rem; font-weight: 600; background: rgba(124,58,237,0.12); color: var(--accent-purple); margin-bottom: 4px;">
-                    <i class="fas fa-user-shield"></i> You (Admin)
-                </span>
-                <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5;">{{ reply.content }}</div>
-                <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 4px;">{{ reply.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
-            </div>
-            {% endfor %}
-
-            <!-- Reply Form -->
-            <form method="POST" action="{{ url_for('dashboard.admin_reply_message', msg_id=msg.id) }}" style="margin-top: 10px;">
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" name="content" placeholder="Write your reply..." required
-                        style="flex: 1; padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-size: 0.85rem; outline: none;">
-                    <button type="submit" class="btn btn-sm" style="background: linear-gradient(135deg, #7c3aed, #a855f7); color: #fff; border: none; white-space: nowrap;">
-                        <i class="fas fa-reply"></i> Reply
-                    </button>
-                </div>
-            </form>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <i class="fas fa-inbox"></i>
-        <p>No messages from staff</p>
-        <p style="font-size: 0.8rem;">Password reset requests from staff will appear here</p>
-    </div>
-    {% endif %}
-</div>
 
 <!-- Edit Student Modal -->
 <div id="editStudentModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; backdrop-filter:blur(4px); justify-content:center; align-items:center;">
@@ -597,6 +599,57 @@
         </form>
     </div>
 </div>
+
+<!-- CSV Upload Modal -->
+<style>
+.csv-modal-overlay {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    align-items: center; justify-content: center;
+}
+.csv-modal-content {
+    background: var(--bg-card-solid);
+    padding: 2rem;
+    border-radius: var(--radius);
+    width: 90%; max-width: 500px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+}
+</style>
+<div id="adminCsvModal" class="csv-modal-overlay">
+    <div class="csv-modal-content">
+        <h3 style="margin-bottom: 1rem; color: var(--text-primary);"><i class="fas fa-file-csv"></i> Upload Students CSV</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+            Upload your student details and academic marks concurrently. <br>
+            <a href="{{ url_for('dashboard.download_csv_template') }}" style="color: var(--accent-blue); text-decoration: none; font-weight: bold;"><i class="fas fa-download"></i> Download Template</a>
+        </p>
+        <form method="POST" action="{{ url_for('dashboard.upload_students_csv') }}" enctype="multipart/form-data">
+            
+            <div class="form-group">
+                <label class="form-label">Assign to Staff</label>
+                <select name="staff_id" class="form-control" required>
+                    <option value="">Select Staff Member</option>
+                    {% for staff in staff_list %}
+                    <option value="{{ staff.id }}">{{ staff.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+    
+            <div class="form-group">
+                <label class="form-label">CSV File</label>
+                <input type="file" name="file" accept=".csv" class="form-control" style="padding: 10px;" required>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+                <button type="button" class="btn" style="background: rgba(100,100,100,0.2); color: var(--text-primary); border: none; flex: 1;" onclick="document.getElementById('adminCsvModal').style.display='none'">Cancel</button>
+                <button type="submit" class="btn" style="background: linear-gradient(135deg, #10b981, #3b82f6); color: white; border: none; flex: 1;">Upload</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -634,4 +687,57 @@
         ]);
     });
 </script>
+
+
+
+<!-- CSV Upload Modal -->
+<style>
+.csv-modal-overlay {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    align-items: center; justify-content: center;
+}
+.csv-modal-content {
+    background: var(--bg-card-solid);
+    padding: 2rem;
+    border-radius: var(--radius);
+    width: 90%; max-width: 500px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+}
+</style>
+<div id="adminCsvModal" class="csv-modal-overlay">
+    <div class="csv-modal-content">
+        <h3 style="margin-bottom: 1rem; color: var(--text-primary);"><i class="fas fa-file-csv"></i> Upload Students CSV</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+            Upload your student details and academic marks concurrently. <br>
+            <a href="{{ url_for('dashboard.download_csv_template') }}" style="color: var(--accent-blue); text-decoration: none; font-weight: bold;"><i class="fas fa-download"></i> Download Template</a>
+        </p>
+        <form method="POST" action="{{ url_for('dashboard.upload_students_csv') }}" enctype="multipart/form-data">
+            
+            <div class="form-group">
+                <label class="form-label">Assign to Staff</label>
+                <select name="staff_id" class="form-control" required>
+                    <option value="">Select Staff Member</option>
+                    {% for staff in staff_list %}
+                    <option value="{{ staff.id }}">{{ staff.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+    
+            <div class="form-group">
+                <label class="form-label">CSV File</label>
+                <input type="file" name="file" accept=".csv" class="form-control" style="padding: 10px;" required>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+                <button type="button" class="btn" style="background: rgba(100,100,100,0.2); color: var(--text-primary); border: none; flex: 1;" onclick="document.getElementById('adminCsvModal').style.display='none'">Cancel</button>
+                <button type="submit" class="btn" style="background: linear-gradient(135deg, #10b981, #3b82f6); color: white; border: none; flex: 1;">Upload</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}

@@ -95,13 +95,14 @@ def admin_dashboard():
     for dept in dept_stats:
         cnt = dept_stats[dept]['attendance_count']
         dept_stats[dept]['avg_attendance'] = round(dept_stats[dept]['total_attendance'] / cnt, 1) if cnt > 0 else 0
-    # Get admin messages (show to all admins)
+
     admin_messages = Message.query.filter(
-        (Message.receiver_type == 'admin')
+        ((Message.receiver_type == 'admin') & (Message.receiver_id == current_user.id)) |
+        ((Message.sender_type == 'admin') & (Message.sender_id == current_user.id))
     ).filter(Message.parent_id == None).order_by(Message.created_at.desc()).all()
 
-    unread_admin_msg_count = Message.query.filter_by(
-        receiver_type='admin', is_read=False
+    unread_msg_count = Message.query.filter_by(
+        receiver_type='admin', receiver_id=current_user.id, is_read=False
     ).count()
 
     return render_template('admin_dashboard.html',
@@ -119,7 +120,7 @@ def admin_dashboard():
                            total_low_risk=total_low_risk,
                            dept_stats=dept_stats,
                            messages=admin_messages,
-                           unread_msg_count=unread_admin_msg_count)
+                           unread_msg_count=unread_msg_count)
 
 
 @dashboard_bp.route('/admin/add-staff', methods=['POST'])
@@ -183,6 +184,11 @@ def add_admin():
         flash('Access denied.', 'error')
         return redirect(url_for('auth.role_select'))
 
+    current_admin_count = User.query.filter_by(role='admin').count()
+    if current_admin_count >= 4:
+        flash('Maximum limit of 4 admins reached.', 'error')
+        return redirect(url_for('dashboard.admin_dashboard'))
+
     username = request.form.get('username', '').strip()
     password = request.form.get('password', '')
 
@@ -232,6 +238,88 @@ def delete_admin(admin_id):
 
 
 # ============================================================
+#  MESSAGES PAGE (All Roles)
+# ============================================================
+
+@dashboard_bp.route('/messages')
+@login_required
+def messages_page():
+    """Dedicated messages page for all roles."""
+    role = session.get('user_role')
+
+    if role == 'admin':
+        admin_messages = Message.query.filter(
+            ((Message.receiver_type == 'admin') & (Message.receiver_id == current_user.id)) |
+            ((Message.sender_type == 'admin') & (Message.sender_id == current_user.id))
+        ).filter(Message.parent_id == None).order_by(Message.created_at.desc()).all()
+
+        unread_msg_count = Message.query.filter_by(
+            receiver_type='admin', receiver_id=current_user.id, is_read=False
+        ).count()
+
+        staff_list = User.query.filter_by(role='staff').order_by(User.created_at.desc()).all()
+
+        return render_template('messages.html',
+                               role='admin',
+                               messages=admin_messages,
+                               unread_msg_count=unread_msg_count,
+                               staff_list=staff_list)
+
+    elif role == 'staff':
+        student_messages = Message.query.filter(
+            ((Message.receiver_type == 'staff') & (Message.receiver_id == current_user.id) & (Message.sender_type == 'student')) |
+            ((Message.sender_type == 'staff') & (Message.sender_id == current_user.id) & (Message.receiver_type == 'student'))
+        ).filter(Message.parent_id == None).order_by(Message.created_at.desc()).all()
+
+        admin_messages = Message.query.filter(
+            ((Message.receiver_type == 'staff') & (Message.receiver_id == current_user.id) & (Message.sender_type == 'admin')) |
+            ((Message.sender_type == 'staff') & (Message.sender_id == current_user.id) & (Message.receiver_type == 'admin'))
+        ).filter(Message.parent_id == None).order_by(Message.created_at.desc()).all()
+
+        unread_msg_count = Message.query.filter_by(
+            receiver_type='staff', receiver_id=current_user.id, is_read=False
+        ).count()
+
+        admin_list = User.query.filter_by(role='admin').all()
+
+        students = Student.query.filter_by(created_by=current_user.id).all()
+        student_data = []
+        for s in students:
+            student_data.append({'student': s})
+
+        return render_template('messages.html',
+                               role='staff',
+                               student_messages=student_messages,
+                               admin_messages=admin_messages,
+                               unread_msg_count=unread_msg_count,
+                               admin_list=admin_list,
+                               student_data=student_data)
+
+    elif role == 'student':
+        student = current_user
+        student_messages = Message.query.filter(
+            ((Message.sender_type == 'student') & (Message.sender_id == student.id)) |
+            ((Message.receiver_type == 'student') & (Message.receiver_id == student.id))
+        ).filter(Message.parent_id == None).order_by(Message.created_at.desc()).all()
+
+        unread_count = Message.query.filter_by(
+            receiver_type='student', receiver_id=student.id, is_read=False
+        ).count()
+
+        assigned_staff = User.query.get(student.created_by) if student.created_by else None
+
+        return render_template('messages.html',
+                               role='student',
+                               student=student,
+                               messages=student_messages,
+                               unread_count=unread_count,
+                               assigned_staff=assigned_staff)
+
+    flash('Access denied.', 'error')
+    return redirect(url_for('auth.role_select'))
+
+
+# ============================================================
 #  STAFF DASHBOARD
 # ============================================================
 
@@ -270,22 +358,33 @@ def staff_dashboard():
     avg_attendance = round(total_attendance / attendance_count, 1) if attendance_count > 0 else 0
 
     # Get messages for this staff member (exclude outgoing messages to admins to prevent them from showing in Student Messages inbox)
-    staff_messages = Message.query.filter(
-        ((Message.receiver_type == 'staff') & (Message.receiver_id == current_user.id)) |
-        ((Message.sender_type == 'staff') & (Message.sender_id == current_user.id) & (Message.receiver_type != 'admin'))
+    # For student messages (staff -> student OR student -> staff)
+    student_messages = Message.query.filter(
+        ((Message.receiver_type == 'staff') & (Message.receiver_id == current_user.id) & (Message.sender_type == 'student')) |
+        ((Message.sender_type == 'staff') & (Message.sender_id == current_user.id) & (Message.receiver_type == 'student'))
+    ).filter(Message.parent_id == None).order_by(Message.created_at.desc()).all()
+
+    # For admin messages (staff -> admin OR admin -> staff)
+    admin_messages = Message.query.filter(
+        ((Message.receiver_type == 'staff') & (Message.receiver_id == current_user.id) & (Message.sender_type == 'admin')) |
+        ((Message.sender_type == 'staff') & (Message.sender_id == current_user.id) & (Message.receiver_type == 'admin'))
     ).filter(Message.parent_id == None).order_by(Message.created_at.desc()).all()
 
     unread_msg_count = Message.query.filter_by(
         receiver_type='staff', receiver_id=current_user.id, is_read=False
     ).count()
 
+    admin_list = User.query.filter_by(role='admin').all()
+
     return render_template('staff_dashboard.html',
                            student_data=student_data,
                            total_students=total_students,
                            pending_predictions=pending_predictions,
                            avg_attendance=avg_attendance,
-                           messages=staff_messages,
-                           unread_msg_count=unread_msg_count)
+                           student_messages=student_messages,
+                           admin_messages=admin_messages,
+                           unread_msg_count=unread_msg_count,
+                           admin_list=admin_list)
 
 
 @dashboard_bp.route('/staff/add-student', methods=['POST'])
@@ -653,6 +752,159 @@ def download_students_by_risk(risk_level):
 
 
 # ============================================================
+#  BULK CSV UPLOAD
+# ============================================================
+
+@dashboard_bp.route('/download-csv-template')
+@login_required
+def download_csv_template():
+    """Download the empty CSV template for bulk importing."""
+    role = session.get('user_role')
+    if role not in ('staff', 'admin'):
+        flash('Access denied.', 'error')
+        return redirect(url_for('auth.role_select'))
+
+    import csv
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Reg No', 'Name', 'Dept', 'Year', 'Password', 'Internal 1', 'Internal 2', 'Internal 3', 'Prev Sem CGPA', 'Assignment', 'Attendance', 'Extra Activities', 'Study Hours'])
+    
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = 'attachment; filename=Bulk_Student_Template.csv'
+    return response
+
+
+@dashboard_bp.route('/upload-students-csv', methods=['POST'])
+@login_required
+def upload_students_csv():
+    """Process a CSV to bulk add students and academic marks."""
+    role = session.get('user_role')
+    if role not in ('staff', 'admin'):
+        flash('Access denied.', 'error')
+        return redirect(url_for('auth.role_select'))
+
+    redirect_to = url_for('dashboard.admin_dashboard') if role == 'admin' else url_for('dashboard.staff_dashboard')
+
+    if 'file' not in request.files:
+        flash('No file part', 'error')
+        return redirect(redirect_to)
+        
+    file = request.files['file']
+    if file.filename == '':
+        flash('No file selected', 'error')
+        return redirect(redirect_to)
+
+    if not file.filename.endswith('.csv'):
+        flash('File must be a CSV format.', 'error')
+        return redirect(redirect_to)
+
+    # Determine assigned staff
+    if role == 'admin':
+        staff_id = request.form.get('staff_id', '')
+        if not staff_id:
+            flash('Please select a staff member to assign these students.', 'error')
+            return redirect(redirect_to)
+        staff = User.query.get(int(staff_id))
+        if not staff or staff.role != 'staff':
+            flash('Invalid staff member selected.', 'error')
+            return redirect(redirect_to)
+        assigned_to = staff.id
+    else:
+        assigned_to = current_user.id
+
+    import csv
+    stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+    csv_input = csv.reader(stream)
+    
+    # Skip header
+    try:
+        next(csv_input)
+    except StopIteration:
+        flash('Empty CSV file.', 'error')
+        return redirect(redirect_to)
+
+    success_count = 0
+    skip_count = 0
+    error_count = 0
+    
+    for row in csv_input:
+        if not row or not row[0].strip():
+            continue # Skip empty rows
+            
+        try:
+            # Basic validation
+            # Current template: Reg No, Name, Dept, Year, Password, In1, In2, In3, CGPA, Assign, Atten, Extra, Study
+            if len(row) < 5:
+                error_count += 1
+                continue
+                
+            reg_no = row[0].strip()
+            name = row[1].strip()
+            dept = row[2].strip()
+            year_str = row[3].strip()
+            password = row[4].strip()
+            
+            if not all([reg_no, name, dept, year_str, password]):
+                error_count += 1
+                continue
+                
+            year = int(year_str) if year_str.isdigit() else 1
+            
+            # Check for existing student
+            if Student.query.filter_by(reg_no=reg_no).first():
+                skip_count += 1
+                continue
+                
+            # Create student
+            student = Student(
+                reg_no=reg_no,
+                name=name,
+                dept=dept,
+                year=year,
+                created_by=assigned_to
+            )
+            student.set_password(password)
+            db.session.add(student)
+            
+            # Parse academics if available
+            if len(row) >= 13:
+                # Helper function for safe float parsing
+                def parse_float(val, default=0.0):
+                    try: return float(val.strip())
+                    except: return default
+                
+                academic = StudentAcademic(
+                    reg_no=reg_no,
+                    internal_1=parse_float(row[5]),
+                    internal_2=parse_float(row[6]),
+                    internal_3=parse_float(row[7]),
+                    prev_sem_gpa=parse_float(row[8]),
+                    assignment=parse_float(row[9]),
+                    attendance=parse_float(row[10]),
+                    extra_activity=(row[11].strip().lower() in ['yes', 'y', '1', 'true']),
+                    study_hours_per_day=parse_float(row[12])
+                )
+                db.session.add(academic)
+
+            success_count += 1
+        except Exception as e:
+            error_count += 1
+            
+    try:
+        db.session.commit()
+        if success_count > 0:
+            flash(f'Successfully imported {success_count} student(s) with marks! (Skipped: {skip_count}, Errors: {error_count})', 'success')
+        else:
+            flash(f'No students imported. (Skipped: {skip_count}, Errors: {error_count})', 'error')
+    except Exception as e:
+        db.session.rollback()
+        flash('Database error occurred during import.', 'error')
+
+    return redirect(redirect_to)
+
+
+# ============================================================
 #  STUDENT DASHBOARD
 # ============================================================
 
@@ -1014,7 +1266,7 @@ def send_message():
     db.session.commit()
 
     flash('Message sent to your staff!', 'success')
-    return redirect(url_for('dashboard.student_dashboard') + '#ask-staff')
+    return redirect(url_for('dashboard.messages_page'))
 
 
 @dashboard_bp.route('/student/mark-read/<int:msg_id>', methods=['POST'])
@@ -1028,7 +1280,7 @@ def mark_message_read(msg_id):
     if msg.receiver_type == 'student' and msg.receiver_id == current_user.id:
         msg.is_read = True
         db.session.commit()
-    return redirect(url_for('dashboard.student_dashboard') + '#ask-staff')
+    return redirect(url_for('dashboard.messages_page'))
 
 
 @dashboard_bp.route('/student/reply-message/<int:msg_id>', methods=['POST'])
@@ -1044,7 +1296,7 @@ def student_reply_message(msg_id):
 
     if not content:
         flash('Reply cannot be empty.', 'error')
-        return redirect(url_for('dashboard.student_dashboard') + '#ask-staff')
+        return redirect(url_for('dashboard.messages_page'))
 
     reply = Message(
         sender_type='student',
@@ -1063,7 +1315,7 @@ def student_reply_message(msg_id):
     db.session.add(reply)
     db.session.commit()
     flash('Reply sent successfully.', 'success')
-    return redirect(url_for('dashboard.student_dashboard') + '#ask-staff')
+    return redirect(url_for('dashboard.messages_page'))
 
 
 @dashboard_bp.route('/staff/reply-message/<int:msg_id>', methods=['POST'])
@@ -1079,7 +1331,7 @@ def reply_message(msg_id):
 
     if not content:
         flash('Reply cannot be empty.', 'error')
-        return redirect(url_for('dashboard.staff_dashboard') + '#student-messages')
+        return redirect(url_for('dashboard.messages_page'))
 
     reply = Message(
         sender_type='staff',
@@ -1096,7 +1348,7 @@ def reply_message(msg_id):
     db.session.commit()
 
     flash('Reply sent!', 'success')
-    return redirect(url_for('dashboard.staff_dashboard') + '#student-messages')
+    return redirect(url_for('dashboard.messages_page'))
 
 
 @dashboard_bp.route('/staff/mark-read/<int:msg_id>', methods=['POST'])
@@ -1110,7 +1362,7 @@ def mark_staff_message_read(msg_id):
     if msg.receiver_type == 'staff' and msg.receiver_id == current_user.id:
         msg.is_read = True
         db.session.commit()
-    return redirect(url_for('dashboard.staff_dashboard') + '#student-messages')
+    return redirect(url_for('dashboard.messages_page'))
 
 
 @dashboard_bp.route('/admin/mark-read/<int:msg_id>', methods=['POST'])
@@ -1124,7 +1376,7 @@ def mark_admin_message_read(msg_id):
     if msg.receiver_type == 'admin':
         msg.is_read = True
         db.session.commit()
-    return redirect(url_for('dashboard.admin_dashboard') + '#admin-messages')
+    return redirect(url_for('dashboard.messages_page'))
 
 
 @dashboard_bp.route('/admin/reply-message/<int:msg_id>', methods=['POST'])
@@ -1140,7 +1392,7 @@ def admin_reply_message(msg_id):
 
     if not content:
         flash('Reply cannot be empty.', 'error')
-        return redirect(url_for('dashboard.admin_dashboard') + '#admin-messages')
+        return redirect(url_for('dashboard.messages_page'))
 
     reply = Message(
         sender_type='admin',
@@ -1157,6 +1409,98 @@ def admin_reply_message(msg_id):
     db.session.commit()
 
     flash('Reply sent!', 'success')
-    return redirect(url_for('dashboard.admin_dashboard') + '#admin-messages')
+    return redirect(url_for('dashboard.messages_page'))
 
 
+@dashboard_bp.route('/staff/send-admin', methods=['POST'])
+@login_required
+def staff_send_admin_message():
+    """Staff sends a message to an Admin."""
+    if session.get('user_role') != 'staff':
+        flash('Access denied.', 'error')
+        return redirect(url_for('auth.role_select'))
+
+    admin_id = request.form.get('admin_id')
+    subject = request.form.get('subject', '').strip()
+    content = request.form.get('content', '').strip()
+
+    if not admin_id or not subject or not content:
+        flash('Admin selection, subject, and message are required.', 'error')
+        return redirect(url_for('dashboard.staff_dashboard'))
+
+    msg = Message(
+        sender_type='staff',
+        sender_id=current_user.id,
+        receiver_type='admin',
+        receiver_id=int(admin_id),
+        subject=subject,
+        content=content
+    )
+    db.session.add(msg)
+    db.session.commit()
+
+    flash('Message sent to Admin!', 'success')
+    return redirect(url_for('dashboard.messages_page'))
+
+
+@dashboard_bp.route('/admin/send-staff', methods=['POST'])
+@login_required
+def admin_send_staff_message():
+    """Admin sends a message to a Staff member."""
+    if session.get('user_role') != 'admin':
+        flash('Access denied.', 'error')
+        return redirect(url_for('auth.role_select'))
+
+    staff_id = request.form.get('staff_id')
+    subject = request.form.get('subject', '').strip()
+    content = request.form.get('content', '').strip()
+
+    if not staff_id or not subject or not content:
+        flash('Staff selection, subject, and message are required.', 'error')
+        return redirect(url_for('dashboard.admin_dashboard'))
+
+    msg = Message(
+        sender_type='admin',
+        sender_id=current_user.id,
+        receiver_type='staff',
+        receiver_id=int(staff_id),
+        subject=subject,
+        content=content
+    )
+    db.session.add(msg)
+    db.session.commit()
+
+    flash('Message sent to Staff!', 'success')
+    return redirect(url_for('dashboard.messages_page'))
+
+
+
+@dashboard_bp.route('/message/delete/<int:msg_id>', methods=['POST'])
+@login_required
+def delete_message(msg_id):
+    """Delete a message and its replies if it is a parent."""
+    message = Message.query.get_or_404(msg_id)
+    
+    role = session.get('user_role')
+    user_id = current_user.id
+    
+    if message.parent_id is None:
+        if not ((message.sender_type == role and message.sender_id == user_id) or 
+                (message.receiver_type == role and message.receiver_id == user_id)):
+            flash('Unauthorized to delete this message.', 'error')
+            return redirect(url_for('dashboard.messages_page'))
+        
+        # Delete all replies first
+        Message.query.filter_by(parent_id=msg_id).delete()
+    else:
+        parent = Message.query.get(message.parent_id)
+        if parent and not ((parent.sender_type == role and parent.sender_id == user_id) or 
+                           (parent.receiver_type == role and parent.receiver_id == user_id)):
+            flash('Unauthorized to delete this reply.', 'error')
+            return redirect(url_for('dashboard.messages_page'))
+
+    db.session.delete(message)
+    db.session.commit()
+    
+    flash('Message deleted.', 'success')
+    return redirect(url_for('dashboard.messages_page'))

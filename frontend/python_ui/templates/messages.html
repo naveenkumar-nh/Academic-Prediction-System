@@ -1,0 +1,1275 @@
+{% extends "base.html" %}
+{% block title %}Messages{% endblock %}
+
+{% block content %}
+<style>
+    /* ===== INSTAGRAM DM — FULL REDESIGN ===== */
+
+    /* Theme Variables for Messaging */
+    :root {
+        --msg-wrapper-bg: var(--msg-wrapper-bg);
+        --msg-sidebar-bg: var(--msg-sidebar-bg);
+        --msg-panel-bg: var(--msg-panel-bg);
+        --msg-border: var(--msg-border);
+        --msg-border-faint: var(--msg-border-faint);
+        --msg-hover: var(--msg-hover);
+        --msg-active: var(--msg-active);
+        --msg-bubble-received: var(--msg-border);
+        --msg-input-bg: var(--msg-border-faint);
+        --msg-modal-overlay: var(--msg-modal-overlay);
+        --msg-scrollbar: var(--msg-scrollbar);
+        --msg-btn-bg: var(--msg-hover);
+        --msg-btn-hover: var(--msg-scrollbar);
+        --msg-shadow: var(--msg-shadow);
+    }
+    
+    [data-theme="light"] {
+        --msg-wrapper-bg: rgba(255,255,255,0.85);
+        --msg-sidebar-bg: rgba(0,0,0,0.01);
+        --msg-panel-bg: rgba(240,242,248,0.7);
+        --msg-border: rgba(0,0,0,0.08);
+        --msg-border-faint: rgba(0,0,0,0.05);
+        --msg-hover: rgba(0,0,0,0.04);
+        --msg-active: rgba(131,58,180,0.05);
+        --msg-bubble-received: #ffffff;
+        --msg-input-bg: rgba(255,255,255,0.9);
+        --msg-modal-overlay: rgba(255,255,255,0.8);
+        --msg-scrollbar: var(--msg-panel-bg);
+        --msg-btn-bg: rgba(0,0,0,0.03);
+        --msg-btn-hover: rgba(0,0,0,0.08);
+        --msg-shadow: rgba(0,0,0,0.1);
+    }
+
+    .ig-chat-wrapper {
+        display: flex;
+        height: calc(100vh - 120px);
+        border-radius: 20px;
+        overflow: hidden;
+        border: 1px solid var(--msg-border);
+        background: var(--msg-wrapper-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 20px 60px var(--msg-shadow);
+    }
+
+    /* ── SIDEBAR ── */
+    .ig-sidebar {
+        width: 340px;
+        min-width: 340px;
+        border-right: 1px solid var(--msg-border-faint);
+        display: flex;
+        flex-direction: column;
+        background: var(--msg-sidebar-bg);
+    }
+
+    .ig-sidebar-header {
+        padding: 20px 20px 16px;
+        border-bottom: 1px solid var(--msg-border-faint);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .ig-sidebar-header h2 {
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+    }
+
+    .ig-sidebar-header h2 i {
+        background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 1.4rem;
+    }
+
+    .ig-compose-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
+        border: none;
+        color: white;
+        font-size: 1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(131,58,180,0.3);
+    }
+
+    .ig-compose-btn:hover {
+        transform: scale(1.1) rotate(90deg);
+        box-shadow: 0 6px 20px rgba(131,58,180,0.5);
+    }
+
+    .ig-contact-list {
+        flex: 1;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--msg-scrollbar) transparent;
+    }
+
+    .ig-contact-list::-webkit-scrollbar { width: 4px; }
+    .ig-contact-list::-webkit-scrollbar-thumb { background: var(--msg-scrollbar); border-radius: 10px; }
+
+    .ig-section-label {
+        padding: 12px 20px 8px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        color: var(--text-muted);
+    }
+
+    .ig-contact {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-left: 3px solid transparent;
+        position: relative;
+    }
+
+    .ig-contact:hover {
+        background: var(--msg-hover);
+    }
+
+    .ig-contact.active {
+        background: var(--msg-active);
+        border-left-color: #833ab4;
+    }
+
+    .ig-contact.has-unread .ig-contact-name {
+        font-weight: 800;
+        color: var(--text-primary);
+    }
+
+    .ig-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 1rem;
+        color: white;
+        flex-shrink: 0;
+        position: relative;
+    }
+
+    .ig-avatar.admin { background: linear-gradient(135deg, #7c3aed, #a855f7); }
+    .ig-avatar.staff { background: linear-gradient(135deg, #059669, #10b981); }
+    .ig-avatar.student { background: linear-gradient(135deg, #d97706, #f59e0b); }
+
+    .ig-avatar .online-dot {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #22c55e;
+        border: 2px solid var(--bg-primary);
+    }
+
+    .ig-contact-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .ig-contact-name {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 3px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .ig-contact-role {
+        font-size: 0.6rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .ig-contact-role.admin { background: rgba(124,58,237,0.15); color: #a78bfa; }
+    .ig-contact-role.staff { background: rgba(16,185,129,0.15); color: #34d399; }
+    .ig-contact-role.student { background: rgba(245,158,11,0.15); color: #fbbf24; }
+
+    .ig-contact-preview {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .ig-contact-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    .ig-contact-time {
+        font-size: 0.68rem;
+        color: var(--text-muted);
+    }
+
+    .ig-unread-dot {
+        padding: 4px 8px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #ff3d71, #ff004c);
+        color: white;
+        font-size: 0.65rem;
+        font-weight: 800;
+        box-shadow: 0 4px 15px rgba(255, 61, 113, 0.4);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        animation: pulse-unread 1.5s infinite;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .ig-unread-dot::after {
+        content: 'New';
+    }
+
+    @keyframes pulse-unread {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 61, 113, 0.6); }
+        70% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(255, 61, 113, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 61, 113, 0); }
+    }
+
+    /* ── CHAT PANEL ── */
+    .ig-chat-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: var(--msg-panel-bg);
+    }
+
+    .ig-chat-header {
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--msg-border-faint);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: var(--msg-sidebar-bg);
+    }
+
+    .ig-chat-header-info h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .ig-chat-header-info span {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    .ig-chat-header-actions {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+    }
+
+    .ig-chat-header-actions button {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 1px solid var(--msg-border);
+        background: var(--msg-hover);
+        color: var(--text-secondary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+    }
+
+    .ig-chat-header-actions button:hover {
+        background: rgba(255,61,113,0.1);
+        color: var(--accent-red);
+        border-color: rgba(255,61,113,0.3);
+    }
+
+    .ig-chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        scrollbar-width: thin;
+        scrollbar-color: var(--msg-scrollbar) transparent;
+    }
+
+    .ig-chat-messages::-webkit-scrollbar { width: 4px; }
+    .ig-chat-messages::-webkit-scrollbar-thumb { background: var(--msg-scrollbar); border-radius: 10px; }
+
+    /* Message Bubbles */
+    .ig-msg-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        max-width: 75%;
+        animation: msgSlideIn 0.3s ease forwards;
+    }
+
+    @keyframes msgSlideIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .ig-msg-row.sent {
+        align-self: flex-end;
+        flex-direction: row-reverse;
+    }
+
+    .ig-msg-row.received {
+        align-self: flex-start;
+    }
+
+    .ig-msg-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.6rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .ig-msg-bubble {
+        padding: 12px 16px;
+        border-radius: 20px;
+        font-size: 0.88rem;
+        line-height: 1.5;
+        word-wrap: break-word;
+        position: relative;
+    }
+
+    .ig-msg-row.sent .ig-msg-bubble {
+        background: linear-gradient(135deg, #833ab4, #5851db, #405de6);
+        color: white;
+        border-bottom-right-radius: 6px;
+    }
+
+    .ig-msg-row.received .ig-msg-bubble {
+        background: var(--msg-bubble-received);
+        color: var(--text-primary);
+        border: 1px solid var(--msg-border-faint);
+        border-bottom-left-radius: 6px;
+    }
+
+    .ig-msg-time {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+        padding: 0 4px;
+    }
+
+    .ig-msg-row.sent .ig-msg-time {
+        text-align: right;
+    }
+
+    .ig-msg-subject {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+        opacity: 0.8;
+    }
+
+    .ig-msg-row.sent .ig-msg-subject {
+        color: rgba(255,255,255,0.7);
+    }
+
+    .ig-msg-row.received .ig-msg-subject {
+        color: var(--accent-blue);
+    }
+
+    /* Date Separator */
+    .ig-date-separator {
+        text-align: center;
+        padding: 16px 0;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        font-weight: 600;
+        position: relative;
+    }
+
+    .ig-date-separator::before,
+    .ig-date-separator::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        width: calc(50% - 60px);
+        height: 1px;
+        background: var(--msg-border-faint);
+    }
+
+    .ig-date-separator::before { left: 0; }
+    .ig-date-separator::after { right: 0; }
+
+    /* Input Bar */
+    .ig-input-bar {
+        padding: 16px 24px;
+        border-top: 1px solid var(--msg-border-faint);
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        background: var(--msg-sidebar-bg);
+    }
+
+    .ig-input-bar input, .ig-input-bar textarea {
+        flex: 1;
+        padding: 12px 20px;
+        border-radius: 24px;
+        background: var(--msg-border-faint);
+        border: 1px solid var(--msg-border);
+        color: var(--text-primary);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.9rem;
+        outline: none;
+        transition: all 0.3s;
+        resize: none;
+    }
+
+    .ig-input-bar input:focus, .ig-input-bar textarea:focus {
+        border-color: rgba(131,58,180,0.4);
+        box-shadow: 0 0 0 4px rgba(131,58,180,0.1);
+    }
+
+    .ig-input-bar input::placeholder, .ig-input-bar textarea::placeholder {
+        color: var(--text-muted);
+    }
+
+    .ig-send-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
+        border: none;
+        color: white;
+        font-size: 1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+        flex-shrink: 0;
+        box-shadow: 0 4px 15px rgba(131,58,180,0.3);
+    }
+
+    .ig-send-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(131,58,180,0.5);
+    }
+
+    /* Empty State */
+    .ig-empty-chat {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        color: var(--text-muted);
+        padding: 3rem;
+        text-align: center;
+    }
+
+    .ig-empty-icon {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        border: 3px solid var(--msg-scrollbar);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        margin-bottom: 8px;
+    }
+
+    .ig-empty-chat h3 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .ig-empty-chat p {
+        font-size: 0.88rem;
+        max-width: 300px;
+        line-height: 1.5;
+    }
+
+    /* ── COMPOSE MODAL ── */
+    .ig-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: var(--msg-modal-overlay);
+        z-index: 9999;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        justify-content: center;
+        align-items: center;
+    }
+
+    .ig-modal {
+        background: var(--bg-card);
+        border-radius: 20px;
+        padding: 0;
+        width: 90%;
+        max-width: 480px;
+        border: 1px solid var(--msg-border);
+        box-shadow: 0 30px 80px var(--msg-modal-overlay);
+        overflow: hidden;
+        animation: modalIn 0.3s ease;
+    }
+
+    @keyframes modalIn {
+        from { opacity: 0; transform: scale(0.95) translateY(20px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .ig-modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--msg-border-faint);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .ig-modal-header h3 {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .ig-modal-header h3 i {
+        background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .ig-modal-close {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--msg-btn-bg);
+        border: none;
+        color: var(--text-muted);
+        font-size: 1.2rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+    }
+
+    .ig-modal-close:hover {
+        background: var(--msg-scrollbar);
+        color: var(--text-primary);
+        transform: rotate(90deg);
+    }
+
+    .ig-modal-body {
+        padding: 24px;
+    }
+
+    .ig-modal-body .form-group {
+        margin-bottom: 1.2rem;
+    }
+
+    .ig-modal-body .form-label {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .ig-modal-body .form-control {
+        width: 100%;
+        padding: 12px 16px;
+        background: var(--msg-hover);
+        border: 1px solid var(--msg-border);
+        border-radius: 12px;
+        color: var(--text-primary);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.9rem;
+        outline: none;
+        transition: all 0.3s;
+    }
+
+    .ig-modal-body .form-control:focus {
+        border-color: rgba(131,58,180,0.4);
+        box-shadow: 0 0 0 4px rgba(131,58,180,0.1);
+    }
+
+    .ig-modal-body textarea.form-control {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    .ig-modal-submit {
+        width: 100%;
+        padding: 14px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
+        border: none;
+        color: white;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.95rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(131,58,180,0.3);
+    }
+
+    .ig-modal-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(131,58,180,0.4);
+    }
+
+    /* ── BACK BUTTON ── */
+    .ig-back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+        padding: 8px 16px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid var(--msg-border-faint);
+    }
+
+    .ig-back-btn:hover {
+        color: var(--text-primary);
+        background: var(--msg-border-faint);
+        transform: translateX(-4px);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+        .ig-chat-wrapper {
+            flex-direction: column;
+            height: auto;
+            min-height: calc(100vh - 120px);
+        }
+
+        .ig-sidebar {
+            width: 100%;
+            min-width: unset;
+            max-height: 300px;
+            border-right: none;
+            border-bottom: 1px solid var(--msg-border-faint);
+        }
+
+        .ig-msg-row {
+            max-width: 90%;
+        }
+
+        .ig-chat-messages {
+            min-height: 400px;
+        }
+    }
+
+    .ig-delete-form { display: inline; }
+</style>
+
+<!-- Back Navigation -->
+{% if role == 'admin' %}
+<a href="{{ url_for('dashboard.admin_dashboard') }}" class="ig-back-btn"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% elif role == 'staff' %}
+<a href="{{ url_for('dashboard.staff_dashboard') }}" class="ig-back-btn"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% elif role == 'student' %}
+<a href="{{ url_for('dashboard.student_dashboard') }}" class="ig-back-btn"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% endif %}
+
+<div class="ig-chat-wrapper">
+    <!-- ═══════════ SIDEBAR ═══════════ -->
+    <div class="ig-sidebar">
+        <div class="ig-sidebar-header">
+            <h2><i class="fas fa-comments"></i> Messages</h2>
+            <button class="ig-compose-btn" onclick="openComposeModal()" title="New Message">
+                <i class="fas fa-pen-fancy"></i>
+            </button>
+        </div>
+        <div class="ig-contact-list">
+
+            {% if role == 'admin' %}
+                <div class="ig-section-label"><i class="fas fa-chalkboard-teacher"></i> Staff Threads</div>
+                {% if messages %}
+                    {% for msg in messages %}
+                    {% set is_unread = not msg.is_read and msg.receiver_id == current_user.id and msg.receiver_type == 'admin' %}
+                    <div class="ig-contact {{ 'active' if loop.first else '' }} {{ 'has-unread' if is_unread else '' }}" onclick="showThread({{ msg.id }})" data-thread-id="{{ msg.id }}">
+                        <div class="ig-avatar staff">
+                            {% if msg.sender_type == 'staff' %}
+                                {% set sender = staff_list | selectattr('id', 'equalto', msg.sender_id) | list %}
+                                {{ sender[0].username[0]|upper if sender else 'S' }}
+                            {% else %}
+                                {{ current_user.username[0]|upper }}
+                            {% endif %}
+                            <div class="online-dot"></div>
+                        </div>
+                        <div class="ig-contact-info">
+                            <div class="ig-contact-name">
+                                {% if msg.sender_type == 'staff' %}
+                                    {% set sender = staff_list | selectattr('id', 'equalto', msg.sender_id) | list %}
+                                    {{ sender[0].username if sender else 'Staff' }}
+                                {% else %}
+                                    You → Staff
+                                {% endif %}
+                                <span class="ig-contact-role staff">Staff</span>
+                            </div>
+                            <div class="ig-contact-preview">{{ msg.subject }}: {{ msg.content[:40] }}...</div>
+                        </div>
+                        <div class="ig-contact-meta">
+                            <span class="ig-contact-time">{{ msg.created_at.strftime('%d %b') }}</span>
+                            {% if is_unread %}<div class="ig-unread-dot"></div>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="padding: 2rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+                        <i class="fas fa-inbox" style="font-size: 1.5rem; opacity: 0.5; margin-bottom: 8px; display: block;"></i>
+                        No conversations yet
+                    </div>
+                {% endif %}
+
+            {% elif role == 'staff' %}
+                <!-- Admin Threads -->
+                <div class="ig-section-label"><i class="fas fa-user-shield"></i> Admin</div>
+                {% if admin_messages %}
+                    {% for msg in admin_messages %}
+                    {% set is_unread = not msg.is_read and msg.receiver_id == current_user.id and msg.receiver_type == 'staff' %}
+                    <div class="ig-contact {{ 'has-unread' if is_unread else '' }}" onclick="showThread({{ msg.id }})" data-thread-id="{{ msg.id }}">
+                        <div class="ig-avatar admin">
+                            {% if msg.sender_type == 'admin' %}
+                                {% set sender = admin_list | selectattr('id', 'equalto', msg.sender_id) | list %}
+                                {{ sender[0].username[0]|upper if sender else 'A' }}
+                            {% else %}
+                                {{ current_user.username[0]|upper }}
+                            {% endif %}
+                        </div>
+                        <div class="ig-contact-info">
+                            <div class="ig-contact-name">
+                                {% if msg.sender_type == 'admin' %}
+                                    {% set sender = admin_list | selectattr('id', 'equalto', msg.sender_id) | list %}
+                                    {{ sender[0].username if sender else 'Admin' }}
+                                {% else %}
+                                    You → Admin
+                                {% endif %}
+                                <span class="ig-contact-role admin">Admin</span>
+                            </div>
+                            <div class="ig-contact-preview">{{ msg.subject }}: {{ msg.content[:40] }}...</div>
+                        </div>
+                        <div class="ig-contact-meta">
+                            <span class="ig-contact-time">{{ msg.created_at.strftime('%d %b') }}</span>
+                            {% if is_unread %}<div class="ig-unread-dot"></div>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="padding: 1rem 20px; color: var(--text-muted); font-size: 0.82rem;">No admin messages</div>
+                {% endif %}
+
+                <!-- Student Threads -->
+                <div class="ig-section-label"><i class="fas fa-user-graduate"></i> Students</div>
+                {% if student_messages %}
+                    {% for msg in student_messages %}
+                    {% set is_unread = not msg.is_read and msg.receiver_id == current_user.id %}
+                    <div class="ig-contact {{ 'has-unread' if is_unread else '' }}" onclick="showThread({{ msg.id }})" data-thread-id="{{ msg.id }}">
+                        <div class="ig-avatar student">
+                            {% for item in student_data %}
+                                {% if item.student.id == msg.sender_id %}
+                                    {{ item.student.name[0]|upper }}
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="ig-contact-info">
+                            <div class="ig-contact-name">
+                                {% for item in student_data %}
+                                    {% if item.student.id == msg.sender_id %}
+                                        {{ item.student.name }}
+                                    {% endif %}
+                                {% endfor %}
+                                <span class="ig-contact-role student">Student</span>
+                            </div>
+                            <div class="ig-contact-preview">{{ msg.subject }}: {{ msg.content[:40] }}...</div>
+                        </div>
+                        <div class="ig-contact-meta">
+                            <span class="ig-contact-time">{{ msg.created_at.strftime('%d %b') }}</span>
+                            {% if is_unread %}<div class="ig-unread-dot"></div>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="padding: 1rem 20px; color: var(--text-muted); font-size: 0.82rem;">No student messages</div>
+                {% endif %}
+
+            {% elif role == 'student' %}
+                <div class="ig-section-label"><i class="fas fa-chalkboard-teacher"></i> Your Staff</div>
+                {% if messages %}
+                    {% for msg in messages %}
+                    {% set is_unread = not msg.is_read and msg.receiver_type == 'student' and msg.receiver_id == student.id %}
+                    <div class="ig-contact {{ 'active' if loop.first else '' }} {{ 'has-unread' if is_unread else '' }}" onclick="showThread({{ msg.id }})" data-thread-id="{{ msg.id }}">
+                        <div class="ig-avatar staff">
+                            {% if assigned_staff %}{{ assigned_staff.username[0]|upper }}{% else %}S{% endif %}
+                            <div class="online-dot"></div>
+                        </div>
+                        <div class="ig-contact-info">
+                            <div class="ig-contact-name">
+                                {{ assigned_staff.username if assigned_staff else 'Staff' }}
+                                <span class="ig-contact-role staff">Staff</span>
+                            </div>
+                            <div class="ig-contact-preview">{{ msg.subject }}: {{ msg.content[:40] }}...</div>
+                        </div>
+                        <div class="ig-contact-meta">
+                            <span class="ig-contact-time">{{ msg.created_at.strftime('%d %b') }}</span>
+                            {% if is_unread %}<div class="ig-unread-dot"></div>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="padding: 2rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+                        <i class="fas fa-comment-dots" style="font-size: 1.5rem; opacity: 0.5; margin-bottom: 8px; display: block;"></i>
+                        Send your first message!
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ═══════════ CHAT PANEL ═══════════ -->
+    <div class="ig-chat-panel">
+
+        {% if role == 'admin' %}
+            {% if messages %}
+                {% for msg in messages %}
+                <div class="ig-thread-panel" id="thread-{{ msg.id }}" style="{{ '' if loop.first else 'display:none;' }} display: flex; flex-direction: column; height: 100%;">
+                    <!-- Chat Header -->
+                    <div class="ig-chat-header">
+                        <div class="ig-avatar staff" style="width:38px;height:38px;font-size:0.85rem;">
+                            {% if msg.sender_type == 'staff' %}
+                                {% set sender = staff_list | selectattr('id', 'equalto', msg.sender_id) | list %}
+                                {{ sender[0].username[0]|upper if sender else 'S' }}
+                            {% else %}
+                                {{ current_user.username[0]|upper }}
+                            {% endif %}
+                        </div>
+                        <div class="ig-chat-header-info">
+                            <h3>{{ msg.subject }}</h3>
+                            <span>
+                                {% if msg.sender_type == 'staff' %}
+                                    {% set sender = staff_list | selectattr('id', 'equalto', msg.sender_id) | list %}
+                                    {{ sender[0].username if sender else 'Staff' }}
+                                {% else %}
+                                    You (Admin)
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="ig-chat-header-actions">
+                            <form method="POST" action="{{ url_for('dashboard.delete_message', msg_id=msg.id) }}" class="ig-delete-form" onsubmit="showCustomConfirm(event, this, 'Delete this entire conversation?', 'Delete Conversation');">
+                                <button type="submit" title="Delete Conversation"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Messages -->
+                    <div class="ig-chat-messages" id="chat-scroll-{{ msg.id }}">
+                        <div class="ig-date-separator">{{ msg.created_at.strftime('%d %b %Y') }}</div>
+
+                        <!-- Original Message -->
+                        <div class="ig-msg-row {{ 'sent' if msg.sender_type == 'admin' else 'received' }}">
+                            <div class="ig-msg-avatar {{ msg.sender_type }}" style="background: {{ 'linear-gradient(135deg, #7c3aed, #a855f7)' if msg.sender_type == 'admin' else 'linear-gradient(135deg, #059669, #10b981)' }};">
+                                {% if msg.sender_type == 'staff' %}
+                                    {% set sender = staff_list | selectattr('id', 'equalto', msg.sender_id) | list %}
+                                    {{ sender[0].username[0]|upper if sender else 'S' }}
+                                {% else %}
+                                    {{ current_user.username[0]|upper }}
+                                {% endif %}
+                            </div>
+                            <div>
+                                <div class="ig-msg-bubble">
+                                    <div class="ig-msg-subject">{{ msg.subject }}</div>
+                                    {{ msg.content }}
+                                </div>
+                                <div class="ig-msg-time">{{ msg.created_at.strftime('%I:%M %p') }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Replies -->
+                        {% for reply in msg.replies %}
+                        <div class="ig-msg-row {{ 'sent' if reply.sender_type == 'admin' else 'received' }}">
+                            <div class="ig-msg-avatar" style="background: {{ 'linear-gradient(135deg, #7c3aed, #a855f7)' if reply.sender_type == 'admin' else 'linear-gradient(135deg, #059669, #10b981)' }};">
+                                {{ current_user.username[0]|upper if reply.sender_type == 'admin' else 'S' }}
+                            </div>
+                            <div>
+                                <div class="ig-msg-bubble">{{ reply.content }}</div>
+                                <div class="ig-msg-time">{{ reply.created_at.strftime('%d %b, %I:%M %p') }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Reply Input -->
+                    <form method="POST" action="{{ url_for('dashboard.admin_reply_message', msg_id=msg.id) }}" class="ig-input-bar">
+                        <input type="text" name="content" placeholder="Reply to this conversation..." required autocomplete="off">
+                        <button type="submit" class="ig-send-btn" title="Send Reply"><i class="fas fa-paper-plane"></i></button>
+                    </form>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="ig-empty-chat">
+                    <div class="ig-empty-icon"><i class="fas fa-comments"></i></div>
+                    <h3>Your Messages</h3>
+                    <p>Send a message to start a conversation with staff members.</p>
+                    <button class="ig-modal-submit" onclick="openComposeModal()" style="width: auto; padding: 12px 32px;"><i class="fas fa-pen-fancy"></i> New Message</button>
+                </div>
+            {% endif %}
+
+        {% elif role == 'staff' %}
+            {% set all_messages = [] %}
+            {% if admin_messages %}{% for m in admin_messages %}{% set _ = all_messages.append(m) %}{% endfor %}{% endif %}
+            {% if student_messages %}{% for m in student_messages %}{% set _ = all_messages.append(m) %}{% endfor %}{% endif %}
+
+            {% if all_messages %}
+                {% for msg in all_messages %}
+                <div class="ig-thread-panel" id="thread-{{ msg.id }}" style="display:none; flex-direction: column; height: 100%;">
+                    <div class="ig-chat-header">
+                        <div class="ig-avatar {{ 'admin' if msg.sender_type == 'admin' or msg.receiver_type == 'admin' else 'student' }}" style="width:38px;height:38px;font-size:0.85rem;">
+                            {% if msg.sender_type == 'admin' %}
+                                {% set sender = admin_list | selectattr('id', 'equalto', msg.sender_id) | list %}
+                                {{ sender[0].username[0]|upper if sender else 'A' }}
+                            {% elif msg.sender_type == 'student' %}
+                                {% for item in student_data %}{% if item.student.id == msg.sender_id %}{{ item.student.name[0]|upper }}{% endif %}{% endfor %}
+                            {% else %}
+                                {{ current_user.username[0]|upper }}
+                            {% endif %}
+                        </div>
+                        <div class="ig-chat-header-info">
+                            <h3>{{ msg.subject }}</h3>
+                            <span>
+                                {% if msg.sender_type == 'admin' %}
+                                    {% set sender = admin_list | selectattr('id', 'equalto', msg.sender_id) | list %}
+                                    {{ sender[0].username if sender else 'Admin' }}
+                                {% elif msg.sender_type == 'student' %}
+                                    {% for item in student_data %}{% if item.student.id == msg.sender_id %}{{ item.student.name }}{% endif %}{% endfor %}
+                                {% else %}
+                                    You (Staff)
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="ig-chat-header-actions">
+                            <form method="POST" action="{{ url_for('dashboard.delete_message', msg_id=msg.id) }}" class="ig-delete-form" onsubmit="showCustomConfirm(event, this, 'Delete this entire conversation?', 'Delete Conversation');">
+                                <button type="submit" title="Delete"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="ig-chat-messages" id="chat-scroll-{{ msg.id }}">
+                        <div class="ig-date-separator">{{ msg.created_at.strftime('%d %b %Y') }}</div>
+
+                        <div class="ig-msg-row {{ 'sent' if msg.sender_type == 'staff' else 'received' }}">
+                            <div class="ig-msg-avatar" style="background: {{ 'linear-gradient(135deg, #059669, #10b981)' if msg.sender_type == 'staff' else ('linear-gradient(135deg, #7c3aed, #a855f7)' if msg.sender_type == 'admin' else 'linear-gradient(135deg, #d97706, #f59e0b)') }};">
+                                {% if msg.sender_type == 'staff' %}{{ current_user.username[0]|upper }}
+                                {% elif msg.sender_type == 'admin' %}A
+                                {% else %}{% for item in student_data %}{% if item.student.id == msg.sender_id %}{{ item.student.name[0]|upper }}{% endif %}{% endfor %}{% endif %}
+                            </div>
+                            <div>
+                                <div class="ig-msg-bubble">
+                                    <div class="ig-msg-subject">{{ msg.subject }}</div>
+                                    {{ msg.content }}
+                                </div>
+                                <div class="ig-msg-time">{{ msg.created_at.strftime('%I:%M %p') }}</div>
+                            </div>
+                        </div>
+
+                        {% for reply in msg.replies %}
+                        <div class="ig-msg-row {{ 'sent' if reply.sender_type == 'staff' else 'received' }}">
+                            <div class="ig-msg-avatar" style="background: {{ 'linear-gradient(135deg, #059669, #10b981)' if reply.sender_type == 'staff' else ('linear-gradient(135deg, #7c3aed, #a855f7)' if reply.sender_type == 'admin' else 'linear-gradient(135deg, #d97706, #f59e0b)') }};">
+                                {% if reply.sender_type == 'staff' %}{{ current_user.username[0]|upper }}{% elif reply.sender_type == 'admin' %}A{% else %}S{% endif %}
+                            </div>
+                            <div>
+                                <div class="ig-msg-bubble">{{ reply.content }}</div>
+                                <div class="ig-msg-time">{{ reply.created_at.strftime('%d %b, %I:%M %p') }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <form method="POST" action="{{ url_for('dashboard.reply_message', msg_id=msg.id) }}" class="ig-input-bar">
+                        <input type="text" name="content" placeholder="Reply..." required autocomplete="off">
+                        <button type="submit" class="ig-send-btn"><i class="fas fa-paper-plane"></i></button>
+                    </form>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if not all_messages %}
+                <div class="ig-empty-chat">
+                    <div class="ig-empty-icon"><i class="fas fa-comments"></i></div>
+                    <h3>Your Messages</h3>
+                    <p>Send a message to admin or wait for student queries.</p>
+                    <button class="ig-modal-submit" onclick="openComposeModal()" style="width: auto; padding: 12px 32px;"><i class="fas fa-pen-fancy"></i> Contact Admin</button>
+                </div>
+            {% endif %}
+
+        {% elif role == 'student' %}
+            {% if messages %}
+                {% for msg in messages %}
+                <div class="ig-thread-panel" id="thread-{{ msg.id }}" style="{{ '' if loop.first else 'display:none;' }} display: flex; flex-direction: column; height: 100%;">
+                    <div class="ig-chat-header">
+                        <div class="ig-avatar staff" style="width:38px;height:38px;font-size:0.85rem;">
+                            {% if assigned_staff %}{{ assigned_staff.username[0]|upper }}{% else %}S{% endif %}
+                        </div>
+                        <div class="ig-chat-header-info">
+                            <h3>{{ msg.subject }}</h3>
+                            <span>{{ assigned_staff.username if assigned_staff else 'Staff' }}</span>
+                        </div>
+                        <div class="ig-chat-header-actions">
+                            <form method="POST" action="{{ url_for('dashboard.delete_message', msg_id=msg.id) }}" class="ig-delete-form" onsubmit="showCustomConfirm(event, this, 'Delete this entire conversation?', 'Delete Conversation');">
+                                <button type="submit" title="Delete"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="ig-chat-messages" id="chat-scroll-{{ msg.id }}">
+                        <div class="ig-date-separator">{{ msg.created_at.strftime('%d %b %Y') }}</div>
+
+                        <div class="ig-msg-row {{ 'sent' if msg.sender_type == 'student' else 'received' }}">
+                            <div class="ig-msg-avatar" style="background: {{ 'linear-gradient(135deg, #d97706, #f59e0b)' if msg.sender_type == 'student' else 'linear-gradient(135deg, #059669, #10b981)' }};">
+                                {% if msg.sender_type == 'student' %}{{ student.name[0]|upper }}{% else %}S{% endif %}
+                            </div>
+                            <div>
+                                <div class="ig-msg-bubble">
+                                    <div class="ig-msg-subject">{{ msg.subject }}</div>
+                                    {{ msg.content }}
+                                </div>
+                                <div class="ig-msg-time">{{ msg.created_at.strftime('%I:%M %p') }}</div>
+                            </div>
+                        </div>
+
+                        {% for reply in msg.replies %}
+                        <div class="ig-msg-row {{ 'sent' if reply.sender_type == 'student' else 'received' }}">
+                            <div class="ig-msg-avatar" style="background: {{ 'linear-gradient(135deg, #d97706, #f59e0b)' if reply.sender_type == 'student' else 'linear-gradient(135deg, #059669, #10b981)' }};">
+                                {% if reply.sender_type == 'student' %}{{ student.name[0]|upper }}{% else %}S{% endif %}
+                            </div>
+                            <div>
+                                <div class="ig-msg-bubble">{{ reply.content }}</div>
+                                <div class="ig-msg-time">{{ reply.created_at.strftime('%d %b, %I:%M %p') }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <form method="POST" action="{{ url_for('dashboard.student_reply_message', msg_id=msg.id) }}" class="ig-input-bar">
+                        <input type="text" name="content" placeholder="Reply..." required autocomplete="off">
+                        <button type="submit" class="ig-send-btn"><i class="fas fa-paper-plane"></i></button>
+                    </form>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="ig-empty-chat">
+                    <div class="ig-empty-icon"><i class="fas fa-comments"></i></div>
+                    <h3>Your Messages</h3>
+                    <p>Send your first query to {{ assigned_staff.username if assigned_staff else 'your staff' }}!</p>
+                    <button class="ig-modal-submit" onclick="openComposeModal()" style="width: auto; padding: 12px 32px;"><i class="fas fa-pen-fancy"></i> Send Message</button>
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<!-- ═══════════ COMPOSE MODAL ═══════════ -->
+<div class="ig-modal-overlay" id="composeModal">
+    <div class="ig-modal">
+        <div class="ig-modal-header">
+            <h3><i class="fas fa-pen-fancy"></i> New Message</h3>
+            <button class="ig-modal-close" onclick="closeComposeModal()">&times;</button>
+        </div>
+        <div class="ig-modal-body">
+            {% if role == 'admin' %}
+            <form method="POST" action="{{ url_for('dashboard.admin_send_staff_message') }}">
+                <div class="form-group">
+                    <label class="form-label">To</label>
+                    <select name="staff_id" class="form-control" required>
+                        <option value="">Select Staff Member</option>
+                        {% for staff in staff_list %}
+                        <option value="{{ staff.id }}">{{ staff.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Subject</label>
+                    <input type="text" name="subject" class="form-control" placeholder="What's this about?" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Message</label>
+                    <textarea name="content" class="form-control" placeholder="Type your message..." required></textarea>
+                </div>
+                <button type="submit" class="ig-modal-submit"><i class="fas fa-paper-plane"></i> Send Message</button>
+            </form>
+
+            {% elif role == 'staff' %}
+            <form method="POST" action="{{ url_for('dashboard.staff_send_admin_message') }}">
+                <div class="form-group">
+                    <label class="form-label">To</label>
+                    <select name="admin_id" class="form-control" required>
+                        <option value="">Select Admin</option>
+                        {% for admin in admin_list %}
+                        <option value="{{ admin.id }}">{{ admin.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Subject</label>
+                    <input type="text" name="subject" class="form-control" placeholder="What's this about?" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Message</label>
+                    <textarea name="content" class="form-control" placeholder="Type your message..." required></textarea>
+                </div>
+                <button type="submit" class="ig-modal-submit"><i class="fas fa-paper-plane"></i> Send to Admin</button>
+            </form>
+
+            {% elif role == 'student' %}
+                {% if assigned_staff %}
+                <form method="POST" action="{{ url_for('dashboard.send_message') }}">
+                    <div class="form-group">
+                        <label class="form-label">To</label>
+                        <div style="padding: 12px 16px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 12px; color: var(--accent-green); font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-chalkboard-teacher"></i> {{ assigned_staff.username }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Subject</label>
+                        <input type="text" name="subject" class="form-control" placeholder="e.g., Doubt in Internal 2" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Message</label>
+                        <textarea name="content" class="form-control" placeholder="Type your message..." required></textarea>
+                    </div>
+                    <button type="submit" class="ig-modal-submit"><i class="fas fa-paper-plane"></i> Send Message</button>
+                </form>
+                {% else %}
+                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: var(--accent-orange); margin-bottom: 1rem;"></i>
+                    <p>No staff assigned. Contact admin to get assigned.</p>
+                </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Show/hide thread panels
+    function showThread(threadId) {
+        // Hide all thread panels
+        document.querySelectorAll('.ig-thread-panel').forEach(p => p.style.display = 'none');
+
+        // Show selected thread
+        const panel = document.getElementById('thread-' + threadId);
+        if (panel) {
+            panel.style.display = 'flex';
+            // Scroll to bottom of messages
+            const chatScroll = document.getElementById('chat-scroll-' + threadId);
+            if (chatScroll) {
+                setTimeout(() => chatScroll.scrollTop = chatScroll.scrollHeight, 100);
+            }
+        }
+
+        // Update active state in contact list
+        document.querySelectorAll('.ig-contact').forEach(c => c.classList.remove('active'));
+        const contact = document.querySelector(`.ig-contact[data-thread-id="${threadId}"]`);
+        if (contact) contact.classList.add('active');
+    }
+
+    // Compose modal
+    function openComposeModal() {
+        document.getElementById('composeModal').style.display = 'flex';
+    }
+
+    function closeComposeModal() {
+        document.getElementById('composeModal').style.display = 'none';
+    }
+
+    // Close modal on outside click
+    document.getElementById('composeModal').addEventListener('click', function(e) {
+        if (e.target === this) closeComposeModal();
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeComposeModal();
+    });
+
+    // Auto-scroll to bottom on page load for active thread
+    document.addEventListener('DOMContentLoaded', function() {
+        const firstThread = document.querySelector('.ig-thread-panel[style*="flex"]') || document.querySelector('.ig-thread-panel:not([style*="none"])');
+        if (firstThread) {
+            const chatScroll = firstThread.querySelector('.ig-chat-messages');
+            if (chatScroll) chatScroll.scrollTop = chatScroll.scrollHeight;
+        }
+
+        // Make first contact active if none
+        const firstContact = document.querySelector('.ig-contact');
+        if (firstContact && !document.querySelector('.ig-contact.active')) {
+            firstContact.classList.add('active');
+            const threadId = firstContact.getAttribute('data-thread-id');
+            if (threadId) showThread(parseInt(threadId));
+        }
+    });
+</script>
+{% endblock %}
