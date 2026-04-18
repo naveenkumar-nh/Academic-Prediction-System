@@ -1,0 +1,16 @@
+Reg No,Name,Dept,Year,Password,Internal 1,Internal 2,Internal 3,Prev Sem CGPA,Assignment,Attendance,Extra Activities,Study Hours
+CSE501,Aarav Kumar,CSE,1 year,1234,78,82,80,8.1,21,88,yes,3
+ECE502,Diya Sharma,ECE,2 year,1234,74,79,81,7.8,20,85,no,4
+MEC503,Vikram Patel,MECH,3 year,1234,69,73,77,7.2,18,82,yes,2
+EEE504,Meera Reddy,EEE,4 year,1234,84,86,88,8.7,23,91,yes,5
+CIV505,Rohan Singh,CIVIL,2 year,1234,71,75,78,7.5,19,84,no,3
+AIM506,Ananya Das,AIML,1 year,1234,88,90,92,9.1,24,93,yes,6
+BBA507,Karthik Nair,BBA,3 year,1234,67,70,72,6.9,17,80,no,2
+BCA508,Priya Menon,BCA,2 year,1234,81,83,85,8.4,22,89,yes,4
+IT509,Sanjay Rao,IT,4 year,1234,76,78,80,8.0,21,87,no,3
+BIO510,Nisha Verma,BIOTECH,1 year,1234,73,77,79,7.7,20,86,yes,4
+MBA511,Arjun Gupta,MBA,2 year,1234,85,87,89,8.8,23,92,yes,5
+CSC512,Kavya Iyer,CSBS,3 year,1234,79,81,84,8.2,22,88,no,3
+DST513,Harish Babu,DATA SCIENCE,1 year,1234,82,85,87,8.6,23,90,yes,5
+CHE514,Sneha Joshi,CHEM,4 year,1234,68,72,75,7.1,18,81,no,2
+PHY515,Aditya Roy,PHYSICS,2 year,1234,77,80,82,8.0,21,87,yes,4

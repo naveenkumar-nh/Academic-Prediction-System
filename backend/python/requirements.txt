@@ -5,3 +5,4 @@ Flask-CORS
 Werkzeug
 reportlab
 gunicorn
+psycopg2-binary
